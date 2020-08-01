@@ -107,8 +107,8 @@ impl Cpu {
         panic!("Compressed instruction is not implimented now!");
     }
 
-    fn decode(&mut self, instruction: u32) -> Result<&Opecode, Trap> {
-        match OPECODES.get(&((instruction & 0x7f) as u8)) {
+    fn decode(&mut self, word: u32) -> Result<&Opecode, Trap> {
+        match OPECODES.get(&((word & 0x7f) as u8)) {
             Some(opecode) => return Ok(&opecode),
             None => panic!("Not found opecode!"),
         }

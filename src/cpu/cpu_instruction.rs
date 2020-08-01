@@ -556,16 +556,14 @@ fn fld(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 fn fsw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
-    cpu.mmu.write32(addr, cpu.f[o.rs2 as usize].to_bits() as u32);
-    Ok(())
+    cpu.mmu.write32(addr, cpu.f[o.rs2 as usize].to_bits() as u32)
 }
 
 /// [fsd rs2,offset(rs1)]
 fn fsd(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
-    cpu.mmu.write64(addr, cpu.f[o.rs2 as usize].to_bits());
-    Ok(())
+    cpu.mmu.write64(addr, cpu.f[o.rs2 as usize].to_bits())
 }
 
 fn disassemble_precision_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
