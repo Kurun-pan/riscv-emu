@@ -47,6 +47,10 @@ impl Cpu {
         self.pc = pc;
     }
 
+    pub fn set_xlen(&mut self, xlen: Xlen) {
+        self.xlen = xlen;
+    }
+
     pub fn tick(&mut self) {
         let instruction_address = self.pc;
         match self.tick_do() {

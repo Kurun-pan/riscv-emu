@@ -4,6 +4,7 @@ pub struct Trap {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub enum Traps {
     // Interrupts
     UserSoftwareInterrupt,

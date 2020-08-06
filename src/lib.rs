@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate lazy_static;
+extern crate memmap;
 
 pub mod emulator;
 pub mod cpu;
@@ -7,3 +8,4 @@ pub mod dram;
 pub mod mmu;
 pub mod system_bus;
 pub mod trap;
+pub mod elf_loader;

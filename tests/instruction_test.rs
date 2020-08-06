@@ -7,9 +7,8 @@ use std::path::PathBuf;
 use std::path::Path;
 
 use riscv_emu::emulator::Emulator;
-use riscv_emu::system_bus::DRAM_BASE_ADDRESS;
 
-fn read_file(filename: &Path) -> io::Result<Vec<u8>> {
+fn _read_file(filename: &Path) -> io::Result<Vec<u8>> {
     let mut file = match File::open(&filename) {
         Err(why) => panic!("couldn't open {}: {}", filename.display(), why),
         Ok(file) => file,
@@ -22,18 +21,17 @@ fn read_file(filename: &Path) -> io::Result<Vec<u8>> {
 }
 
 fn instruction_test(filename: &'static str) -> i64 {
-    // open test program.
+    // load program
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     root.push("tests/bin");
     root.push(filename);
-    let data = read_file(root.as_path()).unwrap();
+    //let data = read_file(root.as_path()).unwrap();
     
     // run test program.
     let mut emu = Emulator::new();
-    emu.load_dram_data(data);
-    emu.set_pc(DRAM_BASE_ADDRESS);
+    emu.load_program(root.as_path());
     emu.run();
-    
+
     emu.cpu.x[10]
 }
 
