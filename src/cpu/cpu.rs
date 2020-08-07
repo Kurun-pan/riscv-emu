@@ -1,5 +1,5 @@
 use crate::cpu::cpu_instruction::{OPECODES, Opecode};
-use crate::trap::Trap;
+use crate::trap::{Trap, Traps};
 use crate::mmu::Mmu;
 
 pub enum Xlen {
@@ -8,10 +8,10 @@ pub enum Xlen {
 }
 
 pub enum PrivilegeMode {
-    User,
-    Supervisor,
-    Hypervisor,
-    Machine,
+    User = 0,
+    Supervisor = 1,
+    Hypervisor = 2,
+    Machine = 3,
 }
 
 pub struct Cpu {
@@ -50,6 +50,42 @@ impl Cpu {
     pub fn set_xlen(&mut self, xlen: Xlen) {
         self.xlen = xlen;
     }
+
+    pub fn read_csr(&mut self, addr: u16, instruction_addr: u64) -> Result<u64, Trap> {
+        let privilege = ((addr >> 8) & 0x3) as u8;
+        let cur_level = self.to_u8(&self.privilege_mode);
+        match privilege <= cur_level {
+            true => Ok(self.csr[addr as usize]),
+            _ => Err(Trap {
+                factor: Traps::IllegalInstruction,
+                value: instruction_addr
+            })
+        }
+    }
+
+    fn to_u8(&self, privilege: &PrivilegeMode) -> u8 {
+        match privilege {
+            PrivilegeMode::User => 0,
+            PrivilegeMode::Supervisor => 1,
+            PrivilegeMode::Hypervisor => 2,
+            PrivilegeMode::Machine => 3,
+        }
+    }
+
+    pub fn write_csr(&mut self, addr: u16, data: u64, instruction_addr: u64) -> Result<(), Trap> {
+        let privilege = ((addr >> 8) & 0x3) as u8;
+        let cur_level = self.to_u8(&self.privilege_mode);
+        match privilege <= cur_level {
+            true => {
+                self.csr[addr as usize] = data;
+                Ok(())
+            },
+            _ => Err(Trap {
+                factor: Traps::IllegalInstruction,
+                value: instruction_addr
+            })
+        }
+    }    
 
     pub fn tick(&mut self) {
         let instruction_addr = self.pc;
