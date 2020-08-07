@@ -52,24 +52,24 @@ impl Cpu {
     }
 
     pub fn tick(&mut self) {
-        let instruction_address = self.pc;
+        let instruction_addr = self.pc;
         match self.tick_do() {
             Ok(()) => {}
-            Err(e) => self.handle_trap(e, instruction_address),
+            Err(e) => self.handle_trap(e, instruction_addr),
         }
     }
 
     fn tick_do(&mut self) -> Result<(), Trap> {
-        let instruction_address = self.pc;
+        let instruction_addr = self.pc;
         let word = match self.fetch() {
             Ok(_word) => _word,
             Err(e) => return Err(e),
         };
 
         // instruction decode.
-        print!(" 0x{:016x}: {:08x}    ", instruction_address, word);
+        print!(" 0x{:016x}: {:08x}    ", instruction_addr, word);
         let instruction = match self.decode(word) {
-            Ok(opecode) => match (opecode.operation)(self, word) {
+            Ok(opecode) => match (opecode.operation)(self, instruction_addr, word) {
                 Ok(_instruction) => _instruction,
                 Err(()) => panic!("Not found instruction!"),
             }
@@ -78,7 +78,7 @@ impl Cpu {
 
         // instruction execute
         println!("{}", (instruction.disassemble)(self, instruction.mnemonic, word));
-        match (instruction.operation)(self, word) {
+        match (instruction.operation)(self, instruction_addr, word) {
             Err(e) => return Err(e),
             _ => {}
         }

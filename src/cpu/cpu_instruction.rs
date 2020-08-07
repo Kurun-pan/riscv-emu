@@ -4,12 +4,12 @@ use crate::cpu::cpu::{Cpu, Xlen};
 use crate::trap::Trap;
 
 pub struct Opecode {
-    pub operation: fn(cpu: &Cpu, word: u32) -> Result<&Instruction, ()>,
+    pub operation: fn(cpu: &Cpu, addr: u64, word: u32) -> Result<&Instruction, ()>,
 }
 
 pub struct Instruction {
     pub mnemonic: &'static str,
-    pub operation: fn(cpu: &mut Cpu, word: u32) -> Result<(), Trap>,
+    pub operation: fn(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap>,
     pub disassemble: fn(cpu: &Cpu, mnemonic: &str, word: u32) -> String,
 }
 
@@ -17,6 +17,11 @@ struct InstructionTypeI {
     rd: u8,
     rs1: u8,
     imm: i64,
+}
+
+struct InstructionTypeJ {
+    rd: u8,
+    imm: u64,
 }
 
 struct InstructionTypeS {
@@ -79,6 +84,7 @@ lazy_static! {
         m.insert(0x1b, Opecode {operation: opecode_1b});
         m.insert(0x23, Opecode {operation: opecode_23});
         m.insert(0x27, Opecode {operation: opecode_27});
+        m.insert(0x6F, Opecode {operation: opecode_6f});
         m
     };
 
@@ -285,7 +291,7 @@ lazy_static! {
     };
 }
 
-fn opecode_03(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
+fn opecode_03(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP03.get(&funct3) {
         Some(instruction) => Ok(&instruction),
@@ -293,7 +299,7 @@ fn opecode_03(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
-fn opecode_07(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
+fn opecode_07(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP07.get(&funct3) {
         Some(instruction) => Ok(&instruction),
@@ -301,7 +307,7 @@ fn opecode_07(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
-fn opecode_0f(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
+fn opecode_0f(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP0F.get(&funct3) {
         Some(instruction) => Ok(&instruction),
@@ -309,7 +315,7 @@ fn opecode_0f(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
-fn opecode_13(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
+fn opecode_13(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP13.get(&funct3) {
         Some(instruction) => Ok(&instruction),
@@ -317,7 +323,7 @@ fn opecode_13(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
-fn opecode_17(_cpu: &Cpu, _word: u32) -> Result<&Instruction, ()> {
+fn opecode_17(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
     let idx = 0;
     match INSTRUCTIONS_GROUP17.get(&idx) {
         Some(instruction) => Ok(&instruction),
@@ -325,7 +331,7 @@ fn opecode_17(_cpu: &Cpu, _word: u32) -> Result<&Instruction, ()> {
     }
 }
 
-fn opecode_1b(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
+fn opecode_1b(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     let funct7 = ((word & 0xe0000000) >> 25) as u8;
     match INSTRUCTIONS_GROUP1B.get(&(funct7, funct3)) {
@@ -334,7 +340,7 @@ fn opecode_1b(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
-fn opecode_23(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
+fn opecode_23(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP23.get(&funct3) {
         Some(instruction) => Ok(&instruction),
@@ -342,7 +348,7 @@ fn opecode_23(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
-fn opecode_27(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
+fn opecode_27(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP27.get(&funct3) {
         Some(instruction) => Ok(&instruction),
@@ -350,11 +356,30 @@ fn opecode_27(_cpu: &Cpu, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
+fn opecode_6f(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
+    Ok(&Instruction {
+        mnemonic: "jal",
+        operation: jal,
+        disassemble: disassemble_jal,
+    })
+}
+
 fn parse_type_i(word: u32) -> InstructionTypeI {
     InstructionTypeI {
         rd:  ((word & 0x00000f80) >>  7) as u8,
         rs1: ((word & 0x000f8000) >> 15) as u8,
         imm: ((word & 0xfff00000) as i32 as i64 >> 20),
+    }
+}
+
+fn parse_type_j(word: u32) -> InstructionTypeJ {
+    InstructionTypeJ {
+        rd:  ((word & 0x00000f80) >>  7) as u8,
+        imm: (match word & 0x80000000 > 0 { // MSB sign-extended
+            true => 0xfff00000,
+            false => 0
+        } | ((word & 0x7fe00000) >> 20) | ((word & 0x00100000) >> 9)
+          | (word & 0x000ff000)) as u64,
     }
 }
 
@@ -390,7 +415,7 @@ fn to_unsigned(cpu: &mut Cpu, data: i64) -> u64 {
 // rs2 to memory.
 
 /// lb rd,offset(rs1)
-fn lb(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn lb(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read8(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => d as i8 as i64,
@@ -401,7 +426,7 @@ fn lb(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// lh rd,offset(rs1)
-fn lh(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn lh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read16(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => d as i16 as i64,
@@ -412,7 +437,7 @@ fn lh(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// lw rd,offset(rs1)
-fn lw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn lw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read32(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => d as i32 as i64,
@@ -423,7 +448,7 @@ fn lw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// ld rd,offset(rs1)
-fn ld(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn ld(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read64(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => d as i64,
@@ -434,7 +459,7 @@ fn ld(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// lbu rd,offset(rs1)
-fn lbu(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn lbu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read8(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => d as i64,
@@ -445,7 +470,7 @@ fn lbu(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// lhu rd,offset(rs1)
-fn lhu(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn lhu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read16(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => d as i64,
@@ -456,7 +481,7 @@ fn lhu(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// lwu rd,offset(rs1)
-fn lwu(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn lwu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read32(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => d as i64,
@@ -481,7 +506,7 @@ fn disassemble_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 // from the low bits of register rs2 to memory.
 
 /// [sb rs2,offset(rs1)]
-fn sb(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn sb(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u8;
@@ -489,7 +514,7 @@ fn sb(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [sh rs2,offset(rs1)]
-fn sh(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn sh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u16;
@@ -497,7 +522,7 @@ fn sh(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [sw rs2,offset(rs1)]
-fn sw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn sw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u32;
@@ -505,7 +530,7 @@ fn sw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [sd rs2,offset(rs1)]
-fn sd(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn sd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u64;
@@ -529,7 +554,7 @@ fn disassemble_store(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 /// [flw rd,offset(rs1)]
 /// The FLW instruction loads a single-precision floating-point value
 /// from memory into floating-point register rd.
-fn flw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn flw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read32(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => f64::from_bits(d as i32 as i64 as u64),
@@ -542,7 +567,7 @@ fn flw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 /// [fld rd,rs1,offset]
 /// The FLD instruction loads a double-precision floating-point value
 /// from memory into floating-point register rd.
-fn fld(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn fld(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let data = match cpu.mmu.read64(cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64) {
         Ok(d) => f64::from_bits(d),
@@ -553,14 +578,14 @@ fn fld(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [fsw rs2,offset(rs1)]
-fn fsw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn fsw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     cpu.mmu.write32(addr, cpu.f[o.rs2 as usize].to_bits() as u32)
 }
 
 /// [fsd rs2,offset(rs1)]
-fn fsd(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn fsd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
     let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     cpu.mmu.write64(addr, cpu.f[o.rs2 as usize].to_bits())
@@ -580,7 +605,7 @@ fn disassemble_precision_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 /// [fence pred, succ], [fence.i]
 /// The FENCE instruction is used to order device I/O and memory accesses
 /// as viewed by other RISC- V harts and external devices or coprocessors.
-fn fence(_cpu: &mut Cpu, _word: u32) -> Result<(), Trap> {
+fn fence(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
     // do nothing.
     Ok(())
 }
@@ -598,14 +623,14 @@ fn disassemble_fence(_cpu: &Cpu, mnemonic: &str, _word: u32) -> String {
 /// ADDI adds the sign-extended 12-bit immediate to register rs1. Arithmetic overfl ow is ignored and
 /// the result is simply the low XLEN bits of the result. ADDI rd, rs1, 0 is used to implement the MV
 /// rd, rs1 assembler pseudoinstruction.
-fn addi(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn addi(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize].wrapping_add(o.imm);
     Ok(())
 }
 
 /// [slli rd,rs1,shamt]
-fn slli(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn slli(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = match cpu.xlen {
         Xlen::X64 => (word >> 20) & 0x1f,
@@ -616,7 +641,7 @@ fn slli(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [slti rd,rs1,imm]
-fn slti(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn slti(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     cpu.x[o.rd as usize] = match cpu.x[o.rs1 as usize] < o.imm {
         true => 1,
@@ -626,7 +651,7 @@ fn slti(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [sltiu rd,rs1,imm]
-fn sltiu(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn sltiu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     cpu.x[o.rd as usize] = match to_unsigned(cpu, cpu.x[o.rs1 as usize]) < to_unsigned(cpu, o.imm) {
         true => 1,
@@ -636,14 +661,14 @@ fn sltiu(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [xori rd,rs1,imm]
-fn xori(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn xori(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] ^ o.imm;
     Ok(())
 }
 
 /// [srli rd,rs1,shamt]
-fn srli(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn srli(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = match cpu.xlen {
         Xlen::X64 => (word >> 20) & 0x1f,
@@ -654,14 +679,14 @@ fn srli(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [ori rd,rs1,imm]
-fn ori(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn ori(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] | o.imm;
     Ok(())
 }
 
 /// [andi rd,rs1,imm]
-fn andi(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn andi(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] & o.imm;
     Ok(())
@@ -670,7 +695,7 @@ fn andi(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 /// [auipc rd,imm]
 /// AUIPC (add upper immediate to pc) is used to build pc-relative
 /// addresses and uses the U-type format.
-fn auipc(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn auipc(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_u(word);
     cpu.x[o.rd as usize] = to_unsigned(cpu, cpu.pc.wrapping_add(o.imm as u64) as i64) as i64;
     Ok(())
@@ -711,17 +736,17 @@ fn disassemble_auipc(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 /// to register rs1 and produces the proper sign-extension of a 32-bit result
 /// in rd. Overflows are ignored and the result is the low 32 bits of the result
 /// sign-extended to 64 bits
-fn addiw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn addiw(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as i32 as i64;
     Ok(())
 }
 
-/// slliw[slliw rd,rs1,shamt]
+/// [slliw rd,rs1,shamt]
 /// SLLIW, SRLIW, and SRAIW are RV64I-only instructions that are analogously defined
 /// but operate on 32-bit values and produce signed 32-bit results. SLLIW, SRLIW, and
 /// SRAIW encodings with imm[5] ̸= 0 are reserved.
-fn slliw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn slliw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = (word >> 20) & 0x1f;
     cpu.x[o.rd as usize] = (cpu.x[o.rs1 as usize] << shamt) as i32 as i64;
@@ -729,7 +754,7 @@ fn slliw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [srliw rd,rs1,shamt]
-fn srliw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn srliw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = (word >> 20) & 0x1f;
     cpu.x[o.rd as usize] = ((cpu.x[o.rs1 as usize] as u32) >> shamt) as i32 as i64;
@@ -737,9 +762,30 @@ fn srliw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
 }
 
 /// [sraiw rd,rs1,shamt]
-fn sraiw(cpu: &mut Cpu, word: u32) -> Result<(), Trap> {
+fn sraiw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = (word >> 20) & 0x1f;
     cpu.x[o.rd as usize] = ((cpu.x[o.rs1 as usize] as i32) >> shamt) as i32 as i64;
     Ok(())
+}
+
+//==============================================================================
+// Control Transfer Instructions
+//==============================================================================
+/// [jal rd,offset]
+/// JAL stores the address of the instruction following the jump (pc+4) into register rd.
+/// The standard software calling convention uses x1 as the return address register and
+/// x5 as an alternate link register.
+fn jal(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_j(word);
+    cpu.x[o.rd as usize] = (cpu.pc + 4) as i64;
+    cpu.pc = addr.wrapping_add(o.imm);
+    Ok(())
+}
+
+fn disassemble_jal(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_j(word);
+    let mut s = String::new();
+    s += &format!("{} {},{}", mnemonic, REGISTERS.get(&o.rd).unwrap(), o.imm);
+    s
 }
