@@ -1,4 +1,4 @@
-use crate::trap::{Trap, Traps};
+use crate::cpu::trap::{Trap, Traps};
 use crate::dram::Dram;
 
 pub const DRAM_BASE_ADDRESS: u64 = 0x8000_0000;

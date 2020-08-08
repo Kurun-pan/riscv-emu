@@ -1,6 +1,6 @@
-use crate::cpu::cpu_instruction::{OPECODES, Opecode};
 use crate::cpu::cpu_csr::Csr;
-use crate::trap::Trap;
+use crate::cpu::cpu_instruction::{Opecode, OPECODES};
+use crate::cpu::trap::Trap;
 use crate::mmu::Mmu;
 
 pub enum Xlen {
@@ -9,7 +9,7 @@ pub enum Xlen {
 }
 
 #[derive(Clone)]
-pub enum PrivilegeMode {
+pub enum Privilege {
     User = 0,
     Supervisor = 1,
     Hypervisor = 2,
@@ -20,7 +20,7 @@ pub struct Cpu {
     pub pc: u64,
     pub wfi: bool,
     pub xlen: Xlen,
-    pub privilege_mode: PrivilegeMode,
+    pub privilege: Privilege,
     pub x: [i64; 32],
     pub f: [f64; 32],
     pub csr: Csr,
@@ -33,7 +33,7 @@ impl Cpu {
             pc: 0,
             wfi: false,
             xlen: Xlen::X64,
-            privilege_mode: PrivilegeMode::Machine,
+            privilege: Privilege::Machine,
             x: [0; 32],
             f: [0.0; 32],
             csr: Csr::new(),
@@ -44,7 +44,7 @@ impl Cpu {
 
     pub fn reset(&mut self) {
         self.pc = 0;
-        self.privilege_mode = PrivilegeMode::Machine;
+        self.privilege = Privilege::Machine;
     }
 
     pub fn set_pc(&mut self, pc: u64) {
@@ -58,13 +58,13 @@ impl Cpu {
     pub fn tick(&mut self) {
         match self.wfi {
             true => return,
-            _ => {},
+            _ => {}
         };
 
         let instruction_addr = self.pc;
         match self.tick_do() {
             Ok(()) => {}
-            Err(e) => self.handle_trap(e, instruction_addr),
+            Err(e) => self.catch_trap(e, instruction_addr),
         }
     }
 
@@ -81,19 +81,22 @@ impl Cpu {
             Ok(opecode) => match (opecode.operation)(self, instruction_addr, word) {
                 Ok(_instruction) => _instruction,
                 Err(()) => panic!("Not found instruction!"),
-            }
-            Err(e) => return Err(e)
+            },
+            Err(e) => return Err(e),
         };
 
         // instruction execute
-        println!("{}", (instruction.disassemble)(self, instruction.mnemonic, word));
+        println!(
+            "{}",
+            (instruction.disassemble)(self, instruction.mnemonic, word)
+        );
         match (instruction.operation)(self, instruction_addr, word) {
             Err(e) => return Err(e),
             _ => {}
         }
         self.x[0] = 0; // hardwired zero
 
-        return Ok(())
+        return Ok(());
     }
 
     fn fetch(&mut self) -> Result<u32, Trap> {
@@ -127,7 +130,7 @@ impl Cpu {
         }
     }
 
-    fn handle_trap(&mut self, trap: Trap, instruction_addr: u64) {
-        // TODO!!
+    fn catch_trap(&mut self, trap: Trap, instruction_addr: u64) {
+        //panic!("{} happend", trap.factor);
     }
 }

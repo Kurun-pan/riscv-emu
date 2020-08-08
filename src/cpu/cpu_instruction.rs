@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::cpu::cpu::{Cpu, PrivilegeMode, Xlen};
+use crate::cpu::cpu::{Cpu, Privilege, Xlen};
 use crate::cpu::cpu_csr::{*};
-use crate::trap::{Trap, Traps};
+use crate::cpu::trap::{Trap, Traps};
 
 pub struct Opecode {
     pub operation: fn(cpu: &Cpu, addr: u64, word: u32) -> Result<&Instruction, ()>,
@@ -1129,13 +1129,13 @@ fn csrrw(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => {},
         _ => {
-            match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
+            match cpu.csr.read(o.csr, addr, &cpu.privilege) {
                 Ok(data) => cpu.x[o.rd as usize] = data as i64,
                 Err(e) => return Err(e)
             };
         }
     }
-    match cpu.csr.write(o.csr, temp, addr, &cpu.privilege_mode) {
+    match cpu.csr.write(o.csr, temp, addr, &cpu.privilege) {
         Ok(()) => Ok(()),
         Err(e) => Err(e),
     }
@@ -1148,13 +1148,13 @@ fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => {},
         _ => {
-            match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
+            match cpu.csr.read(o.csr, addr, &cpu.privilege) {
                 Ok(data) => cpu.x[o.rd as usize] = data as i64,
                 Err(e) => return Err(e)
             };
         }
     }
-    match cpu.csr.write(o.csr, temp, addr, &cpu.privilege_mode) {
+    match cpu.csr.write(o.csr, temp, addr, &cpu.privilege) {
         Ok(()) => Ok(()),
         Err(e) => Err(e),
     }
@@ -1170,7 +1170,7 @@ fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
@@ -1179,7 +1179,7 @@ fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
         _ => {
             match cpu.csr.write(o.csr,
                          cpu.x[o.rd as usize] as u64 | temp,
-                          addr, &cpu.privilege_mode) {
+                          addr, &cpu.privilege) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1191,14 +1191,14 @@ fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.csr.write(o.csr, cpu.x[o.rd as usize] as u64 | temp,  addr, &cpu.privilege_mode) {
+            match cpu.csr.write(o.csr, cpu.x[o.rd as usize] as u64 | temp,  addr, &cpu.privilege) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1215,14 +1215,14 @@ fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege_mode) {
+            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1234,14 +1234,14 @@ fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrci(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege_mode) {
+            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1268,11 +1268,11 @@ fn disassemble_csr(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 /// [ecall]
 fn ecall(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
     Err(Trap {
-        factor: match cpu.privilege_mode {
-            PrivilegeMode::User => Traps::EnvironmentCallFromUMode,
-            PrivilegeMode::Supervisor => Traps::EnvironmentCallFromSMode,
-            PrivilegeMode::Hypervisor => panic!("Hypervisor is not supported!"),
-            PrivilegeMode::Machine => Traps::EnvironmentCallFromMMode,
+        factor: match cpu.privilege {
+            Privilege::User => Traps::EnvironmentCallFromUMode,
+            Privilege::Supervisor => Traps::EnvironmentCallFromSMode,
+            Privilege::Hypervisor => panic!("Hypervisor is not supported!"),
+            Privilege::Machine => Traps::EnvironmentCallFromMMode,
         },
         value: addr,
     })
@@ -1301,7 +1301,7 @@ fn sret(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
 
 /// [mret]
 fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
-    cpu.pc = match cpu.csr.read(CSR_MEPC, addr, &cpu.privilege_mode) {
+    cpu.pc = match cpu.csr.read(CSR_MEPC, addr, &cpu.privilege) {
         Ok(data) => data,
         Err(e) => return Err(e)
     };
@@ -1316,14 +1316,14 @@ fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
               (1 << 7));            // set 1 to MPIE
 
     // update privilege by MPP.
-    cpu.privilege_mode = match mpp {
-        0 => PrivilegeMode::User,
-        1 => PrivilegeMode::Supervisor,
-        2 => PrivilegeMode::Hypervisor,
-        3 => PrivilegeMode::Machine,
+    cpu.privilege = match mpp {
+        0 => Privilege::User,
+        1 => Privilege::Supervisor,
+        2 => Privilege::Hypervisor,
+        3 => Privilege::Machine,
         _ => panic!("Unexpected Error!!")
     };
-    cpu.mmu.set_privilege(&cpu.privilege_mode);
+    cpu.mmu.set_privilege(&cpu.privilege);
     Ok(())
 }
 

@@ -1,5 +1,5 @@
-use crate::cpu::cpu::{Cpu, PrivilegeMode, Xlen};
-use crate::trap::{Trap, Traps};
+use crate::cpu::cpu::{Privilege, Xlen};
+use crate::cpu::trap::{Trap, Traps};
 use crate::system_bus::SystemBus;
 
 const PAGE_SIZE: u64 = 4096;
@@ -18,7 +18,7 @@ pub struct Mmu {
     xlen: Xlen,
     ppn: u64,
     addressing_mode: AddressingMode,
-    privilege_mode: PrivilegeMode,
+    privilege: Privilege,
 }
 
 struct Pte {
@@ -48,12 +48,12 @@ impl Mmu {
             xlen: _xlen,
             ppn: 0,
             addressing_mode: AddressingMode::Bare,
-            privilege_mode: PrivilegeMode::Machine,
+            privilege: Privilege::Machine,
         }
     }
 
-    pub fn set_privilege(&mut self, privilege: &PrivilegeMode) {
-        self.privilege_mode = privilege.clone();
+    pub fn set_privilege(&mut self, privilege: &Privilege) {
+        self.privilege = privilege.clone();
     }
 
     pub fn read8(&mut self, v_addr: u64) -> Result<u8, Trap> {
@@ -160,8 +160,8 @@ impl Mmu {
     fn to_physical_address(&mut self, v_addr: u64, access_type: MemoryAccessType) -> Result<u64, ()> {
         match self.addressing_mode {
             AddressingMode::Bare => Ok(v_addr),
-            AddressingMode::Sv32 => match self.privilege_mode {
-                PrivilegeMode::User | PrivilegeMode::Supervisor => {
+            AddressingMode::Sv32 => match self.privilege {
+                Privilege::User | Privilege::Supervisor => {
                     let vpns = [
                         (v_addr >> 12) & 0x3ff,
                         (v_addr >> 22) & 0x3ff
@@ -170,8 +170,8 @@ impl Mmu {
                 }
                 _ => Ok(v_addr),
             },
-            AddressingMode::Sv39 => match self.privilege_mode {
-                PrivilegeMode::User | PrivilegeMode::Supervisor => {
+            AddressingMode::Sv39 => match self.privilege {
+                Privilege::User | Privilege::Supervisor => {
                     let vpns = [
                         (v_addr >> 12) & 0x1ff,
                         (v_addr >> 21) & 0x1ff,
