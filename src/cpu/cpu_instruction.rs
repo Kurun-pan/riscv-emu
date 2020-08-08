@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use crate::cpu::cpu::{Cpu, Xlen};
-use crate::trap::Trap;
+use crate::cpu::cpu::{Cpu, PrivilegeMode, Xlen};
+use crate::cpu::cpu_csr::{*};
+use crate::trap::{Trap, Traps};
 
 pub struct Opecode {
     pub operation: fn(cpu: &Cpu, addr: u64, word: u32) -> Result<&Instruction, ()>,
@@ -96,6 +97,7 @@ lazy_static! {
         m.insert(0x1b, Opecode {operation: opecode_1b});
         m.insert(0x23, Opecode {operation: opecode_23});
         m.insert(0x27, Opecode {operation: opecode_27});
+        m.insert(0x37, Opecode {operation: opecode_37});
         m.insert(0x63, Opecode {operation: opecode_63});
         m.insert(0x6F, Opecode {operation: opecode_6f});
         m.insert(0x73, Opecode {operation: opecode_73});
@@ -247,7 +249,7 @@ lazy_static! {
         m.insert(0, Instruction{
             mnemonic: "auipc",
             operation: auipc,
-            disassemble: disassemble_auipc,
+            disassemble: disassemble_u,
         });
         m
     };
@@ -375,6 +377,40 @@ lazy_static! {
         });
         m
     };
+    pub static ref INSTRUCTIONS_GROUP73_EXTEND: HashMap<u16, Instruction> = {
+        let mut m = HashMap::new();
+        m.insert(0x000, Instruction{
+            mnemonic: "ecall",
+            operation: ecall,
+            disassemble: disassemble_mnemonic,
+        });
+        m.insert(0x001, Instruction{
+            mnemonic: "ebreak",
+            operation: ebreak,
+            disassemble: disassemble_mnemonic,
+        });
+        m.insert(0x002, Instruction{
+            mnemonic: "uret",
+            operation: uret,
+            disassemble: disassemble_mnemonic,
+        });
+        m.insert(0x102, Instruction{
+            mnemonic: "sret",
+            operation: sret,
+            disassemble: disassemble_mnemonic,
+        });
+        m.insert(0x302, Instruction{
+            mnemonic: "mret",
+            operation: mret,
+            disassemble: disassemble_mnemonic,
+        });
+        m.insert(0x105, Instruction{
+            mnemonic: "wfi",
+            operation: wfi,
+            disassemble: disassemble_mnemonic,
+        });
+        m
+    };
 }
 
 fn opecode_03(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
@@ -442,6 +478,14 @@ fn opecode_27(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
+fn opecode_37(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
+    Ok(&Instruction {
+        mnemonic: "lui",
+        operation: lui,
+        disassemble: disassemble_u,
+    })
+}
+
 fn opecode_63(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP63.get(&funct3) {
@@ -460,9 +504,25 @@ fn opecode_6f(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
 
 fn opecode_73(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
-    match INSTRUCTIONS_GROUP73.get(&funct3) {
-        Some(instruction) => Ok(&instruction),
-        None => panic!("Not found instruction!"),
+    match funct3 {
+        0 => {
+            let funct12 = ((word & 0xfff00000) >> 20) as u16;
+            match funct12 & 0x120 {
+                0x120 => Ok(&Instruction {
+                    mnemonic: "sfence.vma",
+                    operation: sfence,
+                    disassemble: disassemble_mnemonic,
+                }),
+                _ => match INSTRUCTIONS_GROUP73_EXTEND.get(&funct12) {
+                    Some(instruction) => Ok(&instruction),
+                    None => panic!("Not found instruction!"),
+                },
+            }
+        }
+        _ => match INSTRUCTIONS_GROUP73.get(&funct3) {
+            Some(instruction) => Ok(&instruction),
+            None => panic!("Not found instruction!"),
+        },
     }
 }
 
@@ -635,6 +695,13 @@ fn lwu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
         Err(e) => return Err(e),
     };
     cpu.x[o.rd as usize] = data;
+    Ok(())
+}
+
+/// [lui rd,imm]
+fn lui(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_u(word);
+    cpu.x[o.rd as usize] = o.imm << 12;
     Ok(())
 }
 
@@ -900,7 +967,7 @@ fn disassemble_computation_shamt(cpu: &Cpu, mnemonic: &str, word: u32) -> String
     s
 }
 
-fn disassemble_auipc(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+fn disassemble_u(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_u(word);
     let mut s = String::new();
     s += &format!("{} {},{}", mnemonic, REGISTERS.get(&o.rd).unwrap(), o.imm);
@@ -1062,13 +1129,13 @@ fn csrrw(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => {},
         _ => {
-            match cpu.read_csr(o.csr, addr) {
+            match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
                 Ok(data) => cpu.x[o.rd as usize] = data as i64,
                 Err(e) => return Err(e)
             };
         }
     }
-    match cpu.write_csr(o.csr, temp, addr) {
+    match cpu.csr.write(o.csr, temp, addr, &cpu.privilege_mode) {
         Ok(()) => Ok(()),
         Err(e) => Err(e),
     }
@@ -1081,13 +1148,13 @@ fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => {},
         _ => {
-            match cpu.read_csr(o.csr, addr) {
+            match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
                 Ok(data) => cpu.x[o.rd as usize] = data as i64,
                 Err(e) => return Err(e)
             };
         }
     }
-    match cpu.write_csr(o.csr, temp, addr) {
+    match cpu.csr.write(o.csr, temp, addr, &cpu.privilege_mode) {
         Ok(()) => Ok(()),
         Err(e) => Err(e),
     }
@@ -1103,16 +1170,16 @@ fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    match cpu.read_csr(o.csr, addr) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.write_csr(o.csr,
+            match cpu.csr.write(o.csr,
                          cpu.x[o.rd as usize] as u64 | temp,
-                          addr) {
+                          addr, &cpu.privilege_mode) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1124,14 +1191,14 @@ fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    match cpu.read_csr(o.csr, addr) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.write_csr(o.csr, cpu.x[o.rd as usize] as u64 | temp,  addr) {
+            match cpu.csr.write(o.csr, cpu.x[o.rd as usize] as u64 | temp,  addr, &cpu.privilege_mode) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1148,14 +1215,14 @@ fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    match cpu.read_csr(o.csr, addr) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.write_csr(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr) {
+            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege_mode) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1167,14 +1234,14 @@ fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrci(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    match cpu.read_csr(o.csr, addr) {
+    match cpu.csr.read(o.csr, addr, &cpu.privilege_mode) {
         Ok(data) => cpu.x[o.rd as usize] = data as i64,
         Err(e) => return Err(e),
     };
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.write_csr(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr) {
+            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege_mode) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1192,5 +1259,92 @@ fn disassemble_csr(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
         o.csr,
         REGISTERS.get(&o.rs1).unwrap()
     );
+    s
+}
+
+//==============================================================================
+// Environment Call and Breakpoints
+//==============================================================================
+/// [ecall]
+fn ecall(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
+    Err(Trap {
+        factor: match cpu.privilege_mode {
+            PrivilegeMode::User => Traps::EnvironmentCallFromUMode,
+            PrivilegeMode::Supervisor => Traps::EnvironmentCallFromSMode,
+            PrivilegeMode::Hypervisor => panic!("Hypervisor is not supported!"),
+            PrivilegeMode::Machine => Traps::EnvironmentCallFromMMode,
+        },
+        value: addr,
+    })
+}
+
+/// [ebreak]
+fn ebreak(_cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
+    Err(Trap {
+        factor: Traps::Breakpoint,
+        value: addr,
+    })
+}
+
+//==============================================================================
+// Trap-Return Instructions
+//==============================================================================
+/// [uret]
+fn uret(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
+    panic!("TODO!!");
+}
+
+/// [sret]
+fn sret(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
+    panic!("TODO!!");
+}
+
+/// [mret]
+fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
+    cpu.pc = match cpu.csr.read(CSR_MEPC, addr, &cpu.privilege_mode) {
+        Ok(data) => data,
+        Err(e) => return Err(e)
+    };
+
+    // update MSTATUS register.
+    let mstatus = cpu.csr.read_direct(CSR_MSTATUS);
+    let mpp = (mstatus >> 11) & 0x3;
+    let mpie = (mstatus >> 7) & 1;
+    cpu.csr.write_direct(CSR_MSTATUS, 
+        (mstatus & !0x1800) | // set 0 to MPP.
+              (mpie << 3) |         // set MPIE to MIE.
+              (1 << 7));            // set 1 to MPIE
+
+    // update privilege by MPP.
+    cpu.privilege_mode = match mpp {
+        0 => PrivilegeMode::User,
+        1 => PrivilegeMode::Supervisor,
+        2 => PrivilegeMode::Hypervisor,
+        3 => PrivilegeMode::Machine,
+        _ => panic!("Unexpected Error!!")
+    };
+    cpu.mmu.set_privilege(&cpu.privilege_mode);
+    Ok(())
+}
+
+/// [wfi]
+/// The Wait for Interrupt instruction (WFI) provides a hint to the implementation that the current
+/// hart can be stalled until an interrupt might need servicing. Execution of the WFI instruction
+/// can also be used to inform the hardware platform that suitable interrupts should preferentially
+/// be routed to this hart. WFI is available in all of the supported S and M privilege modes, and
+/// optionally available to U-mode for implementations that support U-mode interrupts.
+fn wfi(cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
+    cpu.wfi = true;
+    Ok(())
+}
+
+/// [sfence.vma]
+fn sfence(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
+    Ok(())
+}
+
+fn disassemble_mnemonic(_cpu: &Cpu, mnemonic: &str, _word: u32) -> String {
+    let mut s = String::new();
+    s += &format!("{}", mnemonic);
     s
 }

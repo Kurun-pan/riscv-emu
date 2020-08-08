@@ -1,5 +1,6 @@
 use crate::cpu::cpu_instruction::{OPECODES, Opecode};
-use crate::trap::{Trap, Traps};
+use crate::cpu::cpu_csr::Csr;
+use crate::trap::Trap;
 use crate::mmu::Mmu;
 
 pub enum Xlen {
@@ -7,6 +8,7 @@ pub enum Xlen {
     X64,
 }
 
+#[derive(Clone)]
 pub enum PrivilegeMode {
     User = 0,
     Supervisor = 1,
@@ -16,23 +18,25 @@ pub enum PrivilegeMode {
 
 pub struct Cpu {
     pub pc: u64,
+    pub wfi: bool,
     pub xlen: Xlen,
     pub privilege_mode: PrivilegeMode,
     pub x: [i64; 32],
     pub f: [f64; 32],
-    pub csr: [u64; 4096],
+    pub csr: Csr,
     pub mmu: Mmu,
 }
 
 impl Cpu {
     pub fn new() -> Self {
-        let mut cpu = Cpu {
+        let cpu = Cpu {
             pc: 0,
+            wfi: false,
             xlen: Xlen::X64,
             privilege_mode: PrivilegeMode::Machine,
             x: [0; 32],
             f: [0.0; 32],
-            csr: [0; 4096],
+            csr: Csr::new(),
             mmu: Mmu::new(Xlen::X64),
         };
         cpu
@@ -51,43 +55,12 @@ impl Cpu {
         self.xlen = xlen;
     }
 
-    pub fn read_csr(&mut self, addr: u16, instruction_addr: u64) -> Result<u64, Trap> {
-        let privilege = ((addr >> 8) & 0x3) as u8;
-        let cur_level = self.to_u8(&self.privilege_mode);
-        match privilege <= cur_level {
-            true => Ok(self.csr[addr as usize]),
-            _ => Err(Trap {
-                factor: Traps::IllegalInstruction,
-                value: instruction_addr
-            })
-        }
-    }
-
-    fn to_u8(&self, privilege: &PrivilegeMode) -> u8 {
-        match privilege {
-            PrivilegeMode::User => 0,
-            PrivilegeMode::Supervisor => 1,
-            PrivilegeMode::Hypervisor => 2,
-            PrivilegeMode::Machine => 3,
-        }
-    }
-
-    pub fn write_csr(&mut self, addr: u16, data: u64, instruction_addr: u64) -> Result<(), Trap> {
-        let privilege = ((addr >> 8) & 0x3) as u8;
-        let cur_level = self.to_u8(&self.privilege_mode);
-        match privilege <= cur_level {
-            true => {
-                self.csr[addr as usize] = data;
-                Ok(())
-            },
-            _ => Err(Trap {
-                factor: Traps::IllegalInstruction,
-                value: instruction_addr
-            })
-        }
-    }    
-
     pub fn tick(&mut self) {
+        match self.wfi {
+            true => return,
+            _ => {},
+        };
+
         let instruction_addr = self.pc;
         match self.tick_do() {
             Ok(()) => {}

@@ -1,4 +1,4 @@
-use crate::cpu::cpu::{PrivilegeMode, Xlen};
+use crate::cpu::cpu::{Cpu, PrivilegeMode, Xlen};
 use crate::trap::{Trap, Traps};
 use crate::system_bus::SystemBus;
 
@@ -9,8 +9,8 @@ pub enum AddressingMode {
     Sv32,
     Sv39,
     Sv48,
-    Sv57, // not support
-    Sv64, // not support
+    Sv57,
+    Sv64,
 }
 
 pub struct Mmu {
@@ -50,6 +50,10 @@ impl Mmu {
             addressing_mode: AddressingMode::Bare,
             privilege_mode: PrivilegeMode::Machine,
         }
+    }
+
+    pub fn set_privilege(&mut self, privilege: &PrivilegeMode) {
+        self.privilege_mode = privilege.clone();
     }
 
     pub fn read8(&mut self, v_addr: u64) -> Result<u8, Trap> {
