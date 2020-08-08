@@ -13,6 +13,12 @@ pub struct Instruction {
     pub disassemble: fn(cpu: &Cpu, mnemonic: &str, word: u32) -> String,
 }
 
+struct InstructionTypeB {
+    rs1: u8,
+    rs2: u8,
+    imm: u64,
+}
+
 struct InstructionTypeI {
     rd: u8,
     rs1: u8,
@@ -90,6 +96,7 @@ lazy_static! {
         m.insert(0x1b, Opecode {operation: opecode_1b});
         m.insert(0x23, Opecode {operation: opecode_23});
         m.insert(0x27, Opecode {operation: opecode_27});
+        m.insert(0x63, Opecode {operation: opecode_63});
         m.insert(0x6F, Opecode {operation: opecode_6f});
         m.insert(0x73, Opecode {operation: opecode_73});
         m
@@ -297,6 +304,42 @@ lazy_static! {
         m
     };
 
+    // Conditional Branches.
+    pub static ref INSTRUCTIONS_GROUP63: HashMap<u8, Instruction> = {
+        let mut m = HashMap::new();
+        m.insert(0, Instruction{
+            mnemonic: "beq",
+            operation: beq,
+            disassemble: disassemble_b,
+        });
+        m.insert(1, Instruction{
+            mnemonic: "bne",
+            operation: bne,
+            disassemble: disassemble_b,
+        });
+        m.insert(4, Instruction{
+            mnemonic: "blt",
+            operation: blt,
+            disassemble: disassemble_b,
+        });
+        m.insert(5, Instruction{
+            mnemonic: "bge",
+            operation: bge,
+            disassemble: disassemble_b,
+        });
+        m.insert(6, Instruction{
+            mnemonic: "bltu",
+            operation: bltu,
+            disassemble: disassemble_b,
+        });
+        m.insert(7, Instruction{
+            mnemonic: "bgeu",
+            operation: bgeu,
+            disassemble: disassemble_b,
+        });
+        m
+    };
+
     // Control and Status Register (CSR) Instructions.
     pub static ref INSTRUCTIONS_GROUP73: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
@@ -399,11 +442,19 @@ fn opecode_27(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
+fn opecode_63(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
+    let funct3 = ((word & 0x00007000) >> 12) as u8;
+    match INSTRUCTIONS_GROUP63.get(&funct3) {
+        Some(instruction) => Ok(&instruction),
+        None => panic!("Not found instruction!"),
+    }
+}
+
 fn opecode_6f(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
     Ok(&Instruction {
         mnemonic: "jal",
         operation: jal,
-        disassemble: disassemble_jal,
+        disassemble: disassemble_j,
     })
 }
 
@@ -433,6 +484,20 @@ fn parse_type_j(word: u32) -> InstructionTypeJ {
         } | ((word & 0x7fe00000) >> 20)
             | ((word & 0x00100000) >> 9)
             | (word & 0x000ff000)) as u64,
+    }
+}
+
+fn parse_type_b(word: u32) -> InstructionTypeB {
+    InstructionTypeB {
+        rs1: ((word & 0x000f8000) >> 15) as u8,
+        rs2: ((word & 0x01f00000) >> 20) as u8,
+        imm: (match word & 0x80000000 > 0 {
+            // MSB sign-extended
+            true => 0xfff00000,
+            false => 0,
+        } | ((word & 0x7e000000) >> 20)
+            | ((word & 0x00000080) << 4)
+            | ((word & 0x00000f00) >> 7)) as u64,
     }
 }
 
@@ -897,10 +962,88 @@ fn jal(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     Ok(())
 }
 
-fn disassemble_jal(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+/// [beq rs1,rs2,offset]
+/// BEQ and BNE take the branch if registers rs1 and rs2 are equal or unequal respectively.
+fn beq(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_b(word);
+    match cpu.x[o.rs1 as usize] == cpu.x[o.rs2 as usize] {
+        true => cpu.pc = addr.wrapping_add(o.imm),
+        _ => {}
+    }
+    Ok(())
+}
+
+/// [bne rs1,rs2,offset]
+fn bne(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_b(word);
+    match cpu.x[o.rs1 as usize] != cpu.x[o.rs2 as usize] {
+        true => cpu.pc = addr.wrapping_add(o.imm),
+        _ => {}
+    }
+    Ok(())
+}
+
+/// [blt rs1,rs2,offset]
+/// BLT and BLTU take the branch if rs1 is less than rs2, using signed and unsigned
+/// comparison respectively.
+fn blt(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_b(word);
+    match cpu.x[o.rs1 as usize] < cpu.x[o.rs2 as usize] {
+        true => cpu.pc = addr.wrapping_add(o.imm),
+        _ => {}
+    }
+    Ok(())
+}
+
+/// [bltu rs1,rs2,offset]
+fn bltu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_b(word);
+    match to_unsigned(cpu, cpu.x[o.rs1 as usize]) > to_unsigned(cpu, cpu.x[o.rs2 as usize]) {
+        true => cpu.pc = addr.wrapping_add(o.imm),
+        _ => {}
+    }
+    Ok(())
+}
+
+/// [bge rs1,rs2,offset]
+/// BGE and BGEU take the branch if rs1 is greater than or equal to rs2,
+/// using signed and unsigned comparison respectively.
+fn bge(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_b(word);
+    match cpu.x[o.rs1 as usize] >= cpu.x[o.rs2 as usize] {
+        true => cpu.pc = addr.wrapping_add(o.imm),
+        _ => {}
+    }
+    Ok(())
+}
+
+/// [bgeu rs1,rs2,offset]
+fn bgeu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_b(word);
+    match to_unsigned(cpu, cpu.x[o.rs1 as usize]) >= to_unsigned(cpu, cpu.x[o.rs2 as usize]) {
+        true => cpu.pc = addr.wrapping_add(o.imm),
+        _ => {}
+    }
+    Ok(())
+}
+
+fn disassemble_j(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_j(word);
     let mut s = String::new();
     s += &format!("{} {},{}", mnemonic, REGISTERS.get(&o.rd).unwrap(), o.imm);
+    s
+}
+
+fn disassemble_b(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_b(word);
+    let mut s = String::new();
+    s += &format!(
+        "{} {},{},{}",
+        mnemonic,
+        REGISTERS.get(&o.rs1).unwrap(),
+        REGISTERS.get(&o.rs2).unwrap(),
+        o.imm
+    );
     s
 }
 
