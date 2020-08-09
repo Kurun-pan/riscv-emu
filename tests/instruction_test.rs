@@ -20,7 +20,7 @@ fn _read_file(filename: &Path) -> io::Result<Vec<u8>> {
     }
 }
 
-fn instruction_test(filename: &'static str) -> u64 {
+fn instruction_test(filename: &'static str) -> u32 {
     // load program
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     root.push("tests/bin");
@@ -30,15 +30,15 @@ fn instruction_test(filename: &'static str) -> u64 {
     // run test program.
     let mut emu = Emulator::new();
     emu.load_program(root.as_path());
-    match emu.run() {
+    let result = match emu.run() {
         Ok(ret) => ret,
-        Err(()) => 1,
-    }
+        Err(ret) => ret,
+    };
+    println!("instruction test result is {}", result);
+    result
 }
 
 #[test]
 fn regression() {
-    assert_eq!(1, instruction_test("rv32ui-p-addi"));
-    //assert_eq!(1, instruction_test("rv32ui-p-add"));
-    //assert_eq!(1, instruction_test("rv32ui-p-and"));
+    assert_eq!(1, instruction_test("rv32ui-p-add"));
 }

@@ -90,7 +90,7 @@ impl Emulator {
         println!(".tohost = {:x}", self.tohost);
     }
 
-    pub fn run(&mut self) -> Result<u64, ()> {
+    pub fn run(&mut self) -> Result<u32, u32> {
         println!("Start RISC-V Emulator!");
         loop {
             self.cpu.tick();
@@ -98,7 +98,7 @@ impl Emulator {
                 Ok(data) => match data {
                     0 => {},
                     1 => return Ok(1),
-                    _ => return Err(())
+                    n => return Err(n)
                 },
                 Err(e) => panic!("Faild to read .tohost")
             }

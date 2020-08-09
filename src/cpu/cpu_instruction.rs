@@ -20,6 +20,12 @@ struct InstructionTypeB {
     imm: u64,
 }
 
+struct InstructionTypeR {
+    rd: u8,
+    rs1: u8,
+    rs2: u8,
+}
+
 struct InstructionTypeI {
     rd: u8,
     rs1: u8,
@@ -97,6 +103,7 @@ lazy_static! {
         m.insert(0x1b, Opecode {operation: opecode_1b});
         m.insert(0x23, Opecode {operation: opecode_23});
         m.insert(0x27, Opecode {operation: opecode_27});
+        m.insert(0x33, Opecode {operation: opecode_33});
         m.insert(0x37, Opecode {operation: opecode_37});
         m.insert(0x63, Opecode {operation: opecode_63});
         m.insert(0x67, Opecode {operation: opecode_67});
@@ -307,6 +314,61 @@ lazy_static! {
         m
     };
 
+    pub static ref INSTRUCTIONS_GROUP33: HashMap<(u8, u8), Instruction> = {
+        let mut m = HashMap::new();
+        m.insert((0, 0), Instruction{
+            mnemonic: "add",
+            operation: add,
+            disassemble: disassemble_r,
+        });
+        m.insert((8, 0), Instruction{
+            mnemonic: "sub",
+            operation: sub,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 1), Instruction{
+            mnemonic: "sll",
+            operation: sll,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 2), Instruction{
+            mnemonic: "slt",
+            operation: slt,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 3), Instruction{
+            mnemonic: "sltu",
+            operation: sltu,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 4), Instruction{
+            mnemonic: "xor",
+            operation: xor,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 5), Instruction{
+            mnemonic: "srl",
+            operation: srl,
+            disassemble: disassemble_r,
+        });
+        m.insert((8, 5), Instruction{
+            mnemonic: "sra",
+            operation: sra,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 6), Instruction{
+            mnemonic: "or",
+            operation: or,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 7), Instruction{
+            mnemonic: "and",
+            operation: and,
+            disassemble: disassemble_r,
+        });
+        m
+    };
+
     // Conditional Branches.
     pub static ref INSTRUCTIONS_GROUP63: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
@@ -479,6 +541,15 @@ fn opecode_27(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
+fn opecode_33(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
+    let funct3 = ((word & 0x00007000) >> 12) as u8;
+    let funct7 = ((word & 0xe0000000) >> 25) as u8;
+    match INSTRUCTIONS_GROUP33.get(&(funct7, funct3)) {
+        Some(instruction) => Ok(&instruction),
+        None => panic!("Not found instruction!"),
+    }
+}
+
 fn opecode_37(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
     Ok(&Instruction {
         mnemonic: "lui",
@@ -589,6 +660,14 @@ fn parse_type_u(word: u32) -> InstructionTypeU {
     }
 }
 
+fn parse_type_r(word: u32) -> InstructionTypeR {
+    InstructionTypeR {
+        rd: ((word & 0x00000f80) >> 7) as u8,
+        rs1: ((word & 0x000f8000) >> 15) as u8,
+        rs2: ((word & 0x01f00000) >> 20) as u8,
+    }
+}
+
 fn parse_type_csr(word: u32) -> InstructionTypeCSR {
     InstructionTypeCSR {
         rd: ((word & 0x00000f80) >> 7) as u8,
@@ -597,10 +676,19 @@ fn parse_type_csr(word: u32) -> InstructionTypeCSR {
     }
 }
 
-fn to_unsigned(cpu: &mut Cpu, data: i64) -> u64 {
+/// unsigned extension.
+pub fn unsigned(cpu: &Cpu, data: i64) -> u64 {
     match cpu.xlen {
         Xlen::X32 => (data as u64) & 0x00000000_ffffffff,
         Xlen::X64 => (data as u64) & 0xffffffff_ffffffff,
+    }
+}
+
+/// sign extension.
+pub fn signed(cpu: &Cpu, data: i64) -> i64 {
+    match cpu.xlen {
+        Xlen::X32 => data as i32 as i64,
+        Xlen::X64 => data,
     }
 }
 
@@ -740,7 +828,7 @@ fn disassemble_i(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 /// [sb rs2,offset(rs1)]
 fn sb(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
+    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
     let data = cpu.x[o.rs2 as usize] as u8;
     cpu.mmu.write8(addr, data)
 }
@@ -748,7 +836,7 @@ fn sb(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sh rs2,offset(rs1)]
 fn sh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
+    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
     let data = cpu.x[o.rs2 as usize] as u16;
     cpu.mmu.write16(addr, data)
 }
@@ -756,7 +844,7 @@ fn sh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sw rs2,offset(rs1)]
 fn sw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
+    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
     let data = cpu.x[o.rs2 as usize] as u32;
     cpu.mmu.write32(addr, data)
 }
@@ -764,7 +852,7 @@ fn sw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sd rs2,offset(rs1)]
 fn sd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
+    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
     let data = cpu.x[o.rs2 as usize] as u64;
     cpu.mmu.write64(addr, data)
 }
@@ -831,7 +919,7 @@ fn fsw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [fsd rs2,offset(rs1)]
 fn fsd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
+    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
     cpu.mmu.write64(addr, cpu.f[o.rs2 as usize].to_bits())
 }
 
@@ -874,7 +962,7 @@ fn disassemble_fence(_cpu: &Cpu, mnemonic: &str, _word: u32) -> String {
 /// rd, rs1 assembler pseudoinstruction.
 fn addi(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize].wrapping_add(o.imm);
+    cpu.x[o.rd as usize] = signed(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
     Ok(())
 }
 
@@ -902,7 +990,8 @@ fn slti(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sltiu rd,rs1,imm]
 fn sltiu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    cpu.x[o.rd as usize] = match to_unsigned(cpu, cpu.x[o.rs1 as usize]) < to_unsigned(cpu, o.imm) {
+    cpu.x[o.rd as usize] = match unsigned(cpu, cpu.x[o.rs1 as usize]) < unsigned(cpu, o.imm)
+    {
         true => 1,
         false => 0,
     };
@@ -946,7 +1035,80 @@ fn andi(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// addresses and uses the U-type format.
 fn auipc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_u(word);
-    cpu.x[o.rd as usize] = to_unsigned(cpu, addr.wrapping_add(o.imm) as i64) as i64;
+    cpu.x[o.rd as usize] = signed(cpu, addr.wrapping_add(o.imm) as i64);
+    Ok(())
+}
+
+/// [add rd,rs1,rs2]
+fn add(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        cpu.x[o.rs1 as usize].wrapping_add(cpu.x[o.rs2 as usize]),
+    );
+    Ok(())
+}
+
+/// [sub rd,rs1,rs2]
+fn sub(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize].wrapping_sub(cpu.x[o.rs2 as usize]);
+    Ok(())
+}
+
+/// [sll rd,rs1,rs2]
+fn sll(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    panic!("TODO");
+    Ok(())
+}
+
+/// [slt rd,rs1,rs2]
+fn slt(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize].wrapping_add(cpu.x[o.rs2 as usize]);
+    Ok(())
+}
+
+/// [sltu rd,rs1,rs2]
+fn sltu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    panic!("TODO");
+    Ok(())
+}
+
+/// [xor rd,rs1,rs2]
+fn xor(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] ^ cpu.x[o.rs2 as usize];
+    Ok(())
+}
+
+/// [srl rd,rs1,rs2]
+fn srl(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    panic!("TODO");
+    Ok(())
+}
+
+/// [sra rd,rs1,rs2]
+fn sra(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    panic!("TODO");
+    Ok(())
+}
+
+/// [or rd,rs1,rs2]
+fn or(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] | cpu.x[o.rs2 as usize];
+    Ok(())
+}
+
+/// [and rd,rs1,rs2]
+fn and(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] & cpu.x[o.rs2 as usize];
     Ok(())
 }
 
@@ -984,6 +1146,19 @@ fn disassemble_u(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_u(word);
     let mut s = String::new();
     s += &format!("{} {},{}", mnemonic, REGISTERS.get(&o.rd).unwrap(), o.imm);
+    s
+}
+
+fn disassemble_r(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_r(word);
+    let mut s = String::new();
+    s += &format!(
+        "{} {},{},{}",
+        mnemonic,
+        REGISTERS.get(&o.rd).unwrap(),
+        REGISTERS.get(&o.rs1).unwrap(),
+        REGISTERS.get(&o.rs2).unwrap()
+    );
     s
 }
 
@@ -1077,7 +1252,7 @@ fn bne(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// comparison respectively.
 fn blt(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_b(word);
-    match cpu.x[o.rs1 as usize] < cpu.x[o.rs2 as usize] {
+    match signed(&cpu, cpu.x[o.rs1 as usize]) < signed(&cpu, cpu.x[o.rs2 as usize]) {
         true => cpu.pc = addr.wrapping_add(o.imm),
         _ => {}
     }
@@ -1087,7 +1262,7 @@ fn blt(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// [bltu rs1,rs2,offset]
 fn bltu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_b(word);
-    match to_unsigned(cpu, cpu.x[o.rs1 as usize]) > to_unsigned(cpu, cpu.x[o.rs2 as usize]) {
+    match unsigned(cpu, cpu.x[o.rs1 as usize]) > unsigned(cpu, cpu.x[o.rs2 as usize]) {
         true => cpu.pc = addr.wrapping_add(o.imm),
         _ => {}
     }
@@ -1099,7 +1274,7 @@ fn bltu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// using signed and unsigned comparison respectively.
 fn bge(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_b(word);
-    match cpu.x[o.rs1 as usize] >= cpu.x[o.rs2 as usize] {
+    match signed(&cpu, cpu.x[o.rs1 as usize]) >= signed(&cpu, cpu.x[o.rs2 as usize]) {
         true => cpu.pc = addr.wrapping_add(o.imm),
         _ => {}
     }
@@ -1109,7 +1284,7 @@ fn bge(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// [bgeu rs1,rs2,offset]
 fn bgeu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_b(word);
-    match to_unsigned(cpu, cpu.x[o.rs1 as usize]) >= to_unsigned(cpu, cpu.x[o.rs2 as usize]) {
+    match unsigned(cpu, cpu.x[o.rs1 as usize]) >= unsigned(cpu, cpu.x[o.rs2 as usize]) {
         true => cpu.pc = addr.wrapping_add(o.imm),
         _ => {}
     }
@@ -1199,9 +1374,7 @@ fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     match cpu.x[o.rd as usize] {
         0 /*cpu.x[0]*/ => Ok(()),
         _ => {
-            match cpu.csr.write(o.csr,
-                         cpu.x[o.rd as usize] as u64 | temp,
-                          addr, &cpu.privilege) {
+            match cpu.csr.write(o.csr, cpu.x[o.rd as usize] as u64 | temp, addr, &cpu.privilege) {
                 Ok(()) => Ok(()),
                 Err(e) => Err(e),
             }
@@ -1324,18 +1497,20 @@ fn sret(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
 /// [mret]
 fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
     cpu.pc = match cpu.csr.read(CSR_MEPC, addr, &cpu.privilege) {
-        Ok(data) => data,
-        Err(e) => return Err(e)
+        Ok(data) => unsigned(cpu, data as i64),
+        Err(e) => return Err(e),
     };
 
     // update MSTATUS register.
     let mstatus = cpu.csr.read_direct(CSR_MSTATUS);
     let mpp = (mstatus >> 11) & 0x3;
     let mpie = (mstatus >> 7) & 1;
-    cpu.csr.write_direct(CSR_MSTATUS, 
+    cpu.csr.write_direct(
+        CSR_MSTATUS,
         (mstatus & !0x1800) | // set 0 to MPP.
               (mpie << 3) |         // set MPIE to MIE.
-              (1 << 7));            // set 1 to MPIE
+              (1 << 7),
+    ); // set 1 to MPIE
 
     // update privilege by MPP.
     cpu.privilege = match mpp {
@@ -1343,7 +1518,7 @@ fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
         1 => Privilege::Supervisor,
         2 => Privilege::Hypervisor,
         3 => Privilege::Machine,
-        _ => panic!("Unexpected Error!!")
+        _ => panic!("Unexpected Error!!"),
     };
     cpu.mmu.set_privilege(&cpu.privilege);
     Ok(())
