@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::cpu::cpu::{Cpu, Privilege, Xlen};
-use crate::cpu::cpu_csr::{*};
-use crate::cpu::trap::{Trap, Traps};
+use crate::cpu::cpu_csr::*;
+use crate::cpu::trap::*;
 
 pub struct Opecode {
     pub operation: fn(cpu: &Cpu, addr: u64, word: u32) -> Result<&Instruction, ()>,
@@ -39,7 +39,7 @@ struct InstructionTypeS {
 
 struct InstructionTypeU {
     rd: u8,
-    imm: i64,
+    imm: u64,
 }
 
 struct InstructionTypeCSR {
@@ -99,6 +99,7 @@ lazy_static! {
         m.insert(0x27, Opecode {operation: opecode_27});
         m.insert(0x37, Opecode {operation: opecode_37});
         m.insert(0x63, Opecode {operation: opecode_63});
+        m.insert(0x67, Opecode {operation: opecode_67});
         m.insert(0x6F, Opecode {operation: opecode_6f});
         m.insert(0x73, Opecode {operation: opecode_73});
         m
@@ -110,37 +111,37 @@ lazy_static! {
         m.insert(0, Instruction{
             mnemonic: "lb",
             operation: lb,
-            disassemble: disassemble_load,
+            disassemble: disassemble_i,
         });
         m.insert(1, Instruction{
             mnemonic: "lh",
             operation: lh,
-            disassemble: disassemble_load,
+            disassemble: disassemble_i,
         });
         m.insert(2, Instruction{
             mnemonic: "lw",
             operation: lw,
-            disassemble: disassemble_load,
+            disassemble: disassemble_i,
         });
         m.insert(3, Instruction{
             mnemonic: "ld",
             operation: ld,
-            disassemble: disassemble_load,
+            disassemble: disassemble_i,
         });
         m.insert(4, Instruction{
             mnemonic: "lbu",
             operation: lbu,
-            disassemble: disassemble_load,
+            disassemble: disassemble_i,
         });
         m.insert(5, Instruction{
             mnemonic: "lhu",
             operation: lhu,
-            disassemble: disassemble_load,
+            disassemble: disassemble_i,
         });
         m.insert(6, Instruction{
             mnemonic: "lwu",
             operation: lwu,
-            disassemble: disassemble_load,
+            disassemble: disassemble_i,
         });
         m
     };
@@ -494,6 +495,14 @@ fn opecode_63(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     }
 }
 
+fn opecode_67(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
+    Ok(&Instruction {
+        mnemonic: "jalr",
+        operation: jalr,
+        disassemble: disassemble_i,
+    })
+}
+
 fn opecode_6f(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
     Ok(&Instruction {
         mnemonic: "jal",
@@ -530,7 +539,11 @@ fn parse_type_i(word: u32) -> InstructionTypeI {
     InstructionTypeI {
         rd: ((word & 0x00000f80) >> 7) as u8,
         rs1: ((word & 0x000f8000) >> 15) as u8,
-        imm: ((word & 0xfff00000) as i32 as i64 >> 20),
+        imm: (match word & 0x80000000 > 0 {
+            // MSB sign-extended
+            true => 0xfffff800,
+            false => 0,
+        } | ((word & 0x7ff00000) >> 20)) as i32 as i64,
     }
 }
 
@@ -543,7 +556,7 @@ fn parse_type_j(word: u32) -> InstructionTypeJ {
             false => 0,
         } | ((word & 0x7fe00000) >> 20)
             | ((word & 0x00100000) >> 9)
-            | (word & 0x000ff000)) as u64,
+            | (word & 0x000ff000)) as i32 as i64 as u64,
     }
 }
 
@@ -553,11 +566,11 @@ fn parse_type_b(word: u32) -> InstructionTypeB {
         rs2: ((word & 0x01f00000) >> 20) as u8,
         imm: (match word & 0x80000000 > 0 {
             // MSB sign-extended
-            true => 0xfff00000,
+            true => 0xfffff000,
             false => 0,
         } | ((word & 0x7e000000) >> 20)
             | ((word & 0x00000080) << 4)
-            | ((word & 0x00000f00) >> 7)) as u64,
+            | ((word & 0x00000f00) >> 7)) as i32 as i64 as u64,
     }
 }
 
@@ -572,7 +585,7 @@ fn parse_type_s(word: u32) -> InstructionTypeS {
 fn parse_type_u(word: u32) -> InstructionTypeU {
     InstructionTypeU {
         rd: ((word & 0x00000f80) >> 7) as u8,
-        imm: ((word & 0xfffff000) as i32 as i64 >> 12),
+        imm: ((word & 0xfffff000) as i32 as i64 as u64),
     }
 }
 
@@ -701,11 +714,11 @@ fn lwu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [lui rd,imm]
 fn lui(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_u(word);
-    cpu.x[o.rd as usize] = o.imm << 12;
+    cpu.x[o.rd as usize] = o.imm as i64;
     Ok(())
 }
 
-fn disassemble_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+fn disassemble_i(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_i(word);
     let mut s = String::new();
     s += &format!(
@@ -931,9 +944,9 @@ fn andi(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [auipc rd,imm]
 /// AUIPC (add upper immediate to pc) is used to build pc-relative
 /// addresses and uses the U-type format.
-fn auipc(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+fn auipc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_u(word);
-    cpu.x[o.rd as usize] = to_unsigned(cpu, cpu.pc.wrapping_add(o.imm as u64) as i64) as i64;
+    cpu.x[o.rd as usize] = to_unsigned(cpu, addr.wrapping_add(o.imm) as i64) as i64;
     Ok(())
 }
 
@@ -1026,6 +1039,15 @@ fn jal(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_j(word);
     cpu.x[o.rd as usize] = (cpu.pc + 4) as i64;
     cpu.pc = addr.wrapping_add(o.imm);
+    Ok(())
+}
+
+/// [jalr rd,rs1,offset]
+fn jalr(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_i(word);
+    let temp = (cpu.pc + 4) as i64;
+    cpu.pc = (cpu.x[o.rs1 as usize] as u64).wrapping_add(o.imm as u64);
+    cpu.x[o.rd as usize] = temp;
     Ok(())
 }
 
@@ -1268,11 +1290,11 @@ fn disassemble_csr(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 /// [ecall]
 fn ecall(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
     Err(Trap {
-        factor: match cpu.privilege {
-            Privilege::User => Traps::EnvironmentCallFromUMode,
-            Privilege::Supervisor => Traps::EnvironmentCallFromSMode,
+        exception: match cpu.privilege {
+            Privilege::User => Exception::EnvironmentCallFromUMode,
+            Privilege::Supervisor => Exception::EnvironmentCallFromSMode,
             Privilege::Hypervisor => panic!("Hypervisor is not supported!"),
-            Privilege::Machine => Traps::EnvironmentCallFromMMode,
+            Privilege::Machine => Exception::EnvironmentCallFromMMode,
         },
         value: addr,
     })
@@ -1281,7 +1303,7 @@ fn ecall(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
 /// [ebreak]
 fn ebreak(_cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
     Err(Trap {
-        factor: Traps::Breakpoint,
+        exception: Exception::Breakpoint,
         value: addr,
     })
 }

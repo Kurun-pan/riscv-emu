@@ -1,4 +1,4 @@
-use crate::cpu::trap::{Trap, Traps};
+use crate::cpu::trap::*;
 use crate::dram::Dram;
 
 pub const DRAM_BASE_ADDRESS: u64 = 0x8000_0000;
@@ -19,7 +19,7 @@ impl SystemBus {
             return Ok(self.dram.read8(addr - DRAM_BASE_ADDRESS));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }
@@ -29,7 +29,7 @@ impl SystemBus {
             return Ok(self.dram.read16(addr - DRAM_BASE_ADDRESS));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }
@@ -39,7 +39,7 @@ impl SystemBus {
             return Ok(self.dram.read32(addr - DRAM_BASE_ADDRESS));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }
@@ -49,7 +49,7 @@ impl SystemBus {
             return Ok(self.dram.read64(addr - DRAM_BASE_ADDRESS));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }
@@ -59,7 +59,7 @@ impl SystemBus {
             return Ok(self.dram.write8(addr - DRAM_BASE_ADDRESS, val));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }
@@ -69,7 +69,7 @@ impl SystemBus {
             return Ok(self.dram.write16(addr - DRAM_BASE_ADDRESS, val));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }
@@ -79,7 +79,7 @@ impl SystemBus {
             return Ok(self.dram.write32(addr - DRAM_BASE_ADDRESS, val));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }
@@ -89,7 +89,7 @@ impl SystemBus {
             return Ok(self.dram.write64(addr - DRAM_BASE_ADDRESS, val));
         }
         Err(Trap {
-            factor: Traps::InstructionAccessFault,
+            exception: Exception::InstructionAccessFault,
             value: addr
         })
     }

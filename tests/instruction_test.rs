@@ -20,22 +20,25 @@ fn _read_file(filename: &Path) -> io::Result<Vec<u8>> {
     }
 }
 
-fn instruction_test(filename: &'static str) -> i64 {
+fn instruction_test(filename: &'static str) -> u64 {
     // load program
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     root.push("tests/bin");
     root.push(filename);
     //let data = read_file(root.as_path()).unwrap();
-    
+
     // run test program.
     let mut emu = Emulator::new();
     emu.load_program(root.as_path());
-    emu.run();
-
-    emu.cpu.x[10]
+    match emu.run() {
+        Ok(ret) => ret,
+        Err(()) => 1,
+    }
 }
 
 #[test]
-fn addi() {
-    assert_eq!(0, instruction_test("rv32ui-p-addi"));
+fn regression() {
+    assert_eq!(1, instruction_test("rv32ui-p-addi"));
+    //assert_eq!(1, instruction_test("rv32ui-p-add"));
+    //assert_eq!(1, instruction_test("rv32ui-p-and"));
 }

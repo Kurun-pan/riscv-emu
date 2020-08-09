@@ -1,6 +1,6 @@
-use crate::cpu::cpu_csr::Csr;
+use crate::cpu::cpu_csr::*;
 use crate::cpu::cpu_instruction::{Opecode, OPECODES};
-use crate::cpu::trap::Trap;
+use crate::cpu::trap::*;
 use crate::mmu::Mmu;
 
 pub enum Xlen {
@@ -61,11 +61,15 @@ impl Cpu {
             _ => {}
         };
 
+        self.interrupt_handler();
+
         let instruction_addr = self.pc;
         match self.tick_do() {
             Ok(()) => {}
-            Err(e) => self.catch_trap(e, instruction_addr),
+            Err(e) => self.catch_exception(e, instruction_addr),
         }
+
+        // update timer.
     }
 
     fn tick_do(&mut self) -> Result<(), Trap> {
@@ -130,7 +134,51 @@ impl Cpu {
         }
     }
 
-    fn catch_trap(&mut self, trap: Trap, instruction_addr: u64) {
-        //panic!("{} happend", trap.factor);
+    fn catch_exception(&mut self, trap: Trap, addr: u64) {
+        println!("  >> Exception: {:?}", trap.exception);
+
+        // update CSR/xEPC, xCAUSE, xTVAL registers.
+        {
+            self.csr.write_direct(match self.privilege {
+                Privilege::User => CSR_UEPC,
+                Privilege::Supervisor => CSR_SEPC,
+                Privilege::Hypervisor => CSR_HEPC,
+                Privilege::Machine => CSR_MEPC,
+            }, addr);
+
+            let cause = match self.xlen {
+                Xlen::X32 => 0x80000000,
+                Xlen::X64 => 0x80000000_00000000
+            } | trap.exception as u64;
+            self.csr.read_modify_write_direct(match self.privilege {
+                Privilege::User => CSR_UCAUSE,
+                Privilege::Supervisor => CSR_SCAUSE,
+                Privilege::Hypervisor => CSR_HCAUSE,
+                Privilege::Machine => CSR_MCAUSE,
+            }, cause);
+
+            self.csr.write_direct(match self.privilege {
+                Privilege::User => CSR_UTVAL,
+                Privilege::Supervisor => CSR_STVAL,
+                Privilege::Hypervisor => CSR_HTVAL,
+                Privilege::Machine => CSR_MTVAL,
+            }, trap.value);
+
+            // update MSTATUS register.            
+        }
+
+        // change privilege
+
+        // set exeption vectior address to PC.
+        self.pc =  self.csr.read_direct(match self.privilege {
+            Privilege::User => CSR_UTVEC,
+            Privilege::Supervisor => CSR_STVEC,
+            Privilege::Hypervisor => CSR_HTVEC,
+            Privilege::Machine => CSR_MTVEC,
+        });
+    }
+
+    fn interrupt_handler(&mut self) {
+
     }
 }

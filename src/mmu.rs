@@ -1,5 +1,5 @@
 use crate::cpu::cpu::{Privilege, Xlen};
-use crate::cpu::trap::{Trap, Traps};
+use crate::cpu::trap::*;
 use crate::system_bus::SystemBus;
 
 const PAGE_SIZE: u64 = 4096;
@@ -60,7 +60,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read8(p_addr),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -70,7 +70,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read16(p_addr),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -80,7 +80,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read32(p_addr),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -90,7 +90,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read64(p_addr),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -100,7 +100,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write8(p_addr, val),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -110,7 +110,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write16(p_addr, val),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -120,7 +120,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write32(p_addr, val),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -130,7 +130,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write64(p_addr, val),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -140,7 +140,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Fetch) {
             Ok(p_addr) => self.bus.read32(p_addr),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }
@@ -151,7 +151,7 @@ impl Mmu {
         match self.to_physical_address(v_addr, MemoryAccessType::Fetch) {
             Ok(p_addr) => self.bus.read16(p_addr),
             Err(()) => Err(Trap {
-                factor: Traps::LoadPageFault,
+                exception: Exception::LoadPageFault,
                 value: v_addr,
             }),
         }

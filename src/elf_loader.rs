@@ -3,8 +3,9 @@ use std::fs::File;
 
 use std::path::Path;
 
-// 0x7f 'E' 'L' 'F'
-const HEADER_MAGIC: [u8; 4] = [0x7f, 0x45, 0x4c, 0x46];
+const HEADER_MAGIC: [u8; 4] = [0x7f, 0x45, 0x4c, 0x46]; // 0x7f 'E' 'L' 'F'
+                                                        //const TOHOST: [u8; 8] = [0x2e, 0x74, 0x6f, 0x68, 0x6f, 0x73, 0x74, 0x00]; // .tohost
+const TOHOST: u64 = 0x0074736f686f742e;
 
 pub struct ElfHeader {
     pub e_indent: Ei,
@@ -63,6 +64,7 @@ pub enum ShType {
     SHT_HIUSER = 0xFFFFFFFF,  //
 }
 
+/*
 #[derive(Debug)]
 pub enum ShFlag {
     SHF_WRITE = 0x1,
@@ -80,6 +82,7 @@ pub enum ShFlag {
     SHF_ORDERED = 0x4000000,
     SHF_EXCLUDE = 0x8000000,
 }
+*/
 
 #[derive(Debug)]
 pub struct Ei {
@@ -207,18 +210,18 @@ impl ElfLoader {
                 0 => EiClass::ELFCLASSNONE,
                 1 => EiClass::ELFCLASS32,
                 2 => EiClass::ELFCLASS64,
-                n => panic!("Unknown e_ident class {}", n)
+                n => panic!("Unknown e_ident class {}", n),
             },
             ei_data: match self.mapped_file[5] {
                 0 => EiData::ELFDATANONE,
                 1 => EiData::ELFDATA2LSB,
                 2 => EiData::ELFDATA2MSB,
-                n => panic!("Unknown e_ident endian {}", n)
+                n => panic!("Unknown e_ident endian {}", n),
             },
             ei_version: match self.mapped_file[6] {
                 0 => EiVersion::EV_NONE,
                 1 => EiVersion::EV_CURRENT,
-                n => panic!("Unknown e_ident version {}", n)
+                n => panic!("Unknown e_ident version {}", n),
             },
             ei_osabi: match self.mapped_file[7] {
                 0x00 => EiOsAbi::ELFOSABI_SYSTEM_V,
@@ -239,12 +242,12 @@ impl ElfLoader {
                 0x10 => EiOsAbi::ELFOSABI_FENIX_OS,
                 0x11 => EiOsAbi::ELFOSABI_CLOUD_ABI,
                 0x12 => EiOsAbi::ELFOSABI_STARTUS_TECHNOLOGIES_OPEN_VOS,
-                n => panic!("Unknown e_ident version {}", n)
+                n => panic!("Unknown e_ident version {}", n),
             },
             ei_abiversion: self.mapped_file[8],
         };
 
-        let e_entry =  match ei.ei_classs {
+        let e_entry = match ei.ei_classs {
             EiClass::ELFCLASS32 => self.read32(0x18) as u64,
             _ => self.read64(0x18),
         };
@@ -297,7 +300,7 @@ impl ElfLoader {
                 0xFEFF => EType::ET_HIOS,
                 0xFF00 => EType::ET_LOPROC,
                 0xFFFF => EType::ET_HIPROC,
-                n => panic!("Unknown type {:04X}", n)
+                n => panic!("Unknown type {:04X}", n),
             },
             e_machine: match self.mapped_file[0x12] {
                 0x00 => EMachine::EM_NONE,
@@ -322,12 +325,12 @@ impl ElfLoader {
                 0x8C => EMachine::EM_TMS320,
                 0xB7 => EMachine::EM_ARM64,
                 0xF3 => EMachine::EM_RISCV,
-                n => panic!("Unknown machine {:02X}", n)
+                n => panic!("Unknown machine {:02X}", n),
             },
             e_version: match self.read32(0x14) {
                 0 => EVersion::EV_NONE,
                 1 => EVersion::EV_CURRENT,
-                n => panic!("Unknown elf version {:02X}", n)
+                n => panic!("Unknown elf version {:02X}", n),
             },
             e_entry: e_entry,
             e_phoff: e_phoff,
@@ -338,7 +341,7 @@ impl ElfLoader {
             e_phnum: e_phnum,
             e_shentsize: e_shentsize,
             e_shnum: e_shnum,
-            e_shstrndx: e_shstrndx
+            e_shstrndx: e_shstrndx,
         }
     }
 
@@ -366,13 +369,11 @@ impl ElfLoader {
                 0x11 => ShType::SHT_GROUP,
                 0x12 => ShType::SHT_SYMTAB_SHNDX,
                 0x13 => ShType::SHT_NUM,
-                n => {
-                    match n {
-                        0x70000000 ... 0x7FFFFFFF => ShType::SHT_LOPROC,
-                        0x80000000 ... 0x8FFFFFFF => ShType::SHT_LOUSER,
-                        n => panic!("Unknown type version {:08X}", n)
-                    }
-                }
+                n => match n {
+                    0x70000000...0x7FFFFFFF => ShType::SHT_LOPROC,
+                    0x80000000...0x8FFFFFFF => ShType::SHT_LOUSER,
+                    n => panic!("Unknown type version {:08X}", n),
+                },
             };
             let sh_flags = match elf_header.e_indent.ei_classs {
                 EiClass::ELFCLASS32 => self.read32(offset + 8) as u64,
@@ -417,10 +418,29 @@ impl ElfLoader {
                 sh_link: sh_link,
                 sh_info: sh_info,
                 sh_addralign: sh_addralign,
-                sh_entsize: sh_entsize
+                sh_entsize: sh_entsize,
             });
         }
         shs
+    }
+
+    /// find .tohost section and get address of that.
+    pub fn search_tohost(
+        &self,
+        progbits_sec_headers: &Vec<&SectionHeader>,
+        strtab_sec_headers: &Vec<&SectionHeader>,
+    ) -> Option<u64> {
+        for i in 0..progbits_sec_headers.len() {
+            for j in 0..strtab_sec_headers.len() {
+                let offset = (progbits_sec_headers[i].sh_name as u64
+                    + strtab_sec_headers[j].sh_offset) as usize;
+                match self.read64(offset) {
+                    TOHOST => return Some(progbits_sec_headers[i].sh_addr),
+                    _ => {}
+                }
+            }
+        }
+        None
     }
 
     pub fn read8(&self, offset: usize) -> u8 {
@@ -449,5 +469,5 @@ impl ElfLoader {
             data |= (self.mapped_file[offset + i] as u64) << (8 * i);
         }
         data
-    }    
+    }
 }
