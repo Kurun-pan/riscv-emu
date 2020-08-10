@@ -321,7 +321,7 @@ lazy_static! {
             operation: add,
             disassemble: disassemble_r,
         });
-        m.insert((8, 0), Instruction{
+        m.insert((32, 0), Instruction{
             mnemonic: "sub",
             operation: sub,
             disassemble: disassemble_r,
@@ -351,7 +351,7 @@ lazy_static! {
             operation: srl,
             disassemble: disassemble_r,
         });
-        m.insert((8, 5), Instruction{
+        m.insert((32, 5), Instruction{
             mnemonic: "sra",
             operation: sra,
             disassemble: disassemble_r,
@@ -973,7 +973,7 @@ fn slli(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
         Xlen::X64 => (word >> 20) & 0x1f,
         Xlen::X32 => (word >> 20) & 0x3f,
     };
-    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] << shamt;
+    cpu.x[o.rd as usize] = signed(cpu, cpu.x[o.rs1 as usize] << shamt);
     Ok(())
 }
 
@@ -1051,7 +1051,10 @@ fn add(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sub rd,rs1,rs2]
 fn sub(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize].wrapping_sub(cpu.x[o.rs2 as usize]);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        cpu.x[o.rs1 as usize].wrapping_sub(cpu.x[o.rs2 as usize]),
+    );
     Ok(())
 }
 
@@ -1216,15 +1219,15 @@ fn sraiw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// x5 as an alternate link register.
 fn jal(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_j(word);
-    cpu.x[o.rd as usize] = (cpu.pc + 4) as i64;
+    cpu.x[o.rd as usize] = signed(cpu, (addr + 4) as i64);
     cpu.pc = addr.wrapping_add(o.imm);
     Ok(())
 }
 
 /// [jalr rd,rs1,offset]
-fn jalr(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+fn jalr(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    let temp = (cpu.pc + 4) as i64;
+    let temp = signed(cpu, (addr + 4) as i64);
     cpu.pc = (cpu.x[o.rs1 as usize] as u64).wrapping_add(o.imm as u64);
     cpu.x[o.rd as usize] = temp;
     Ok(())
@@ -1266,7 +1269,7 @@ fn blt(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// [bltu rs1,rs2,offset]
 fn bltu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_b(word);
-    match unsigned(cpu, cpu.x[o.rs1 as usize]) > unsigned(cpu, cpu.x[o.rs2 as usize]) {
+    match unsigned(cpu, cpu.x[o.rs1 as usize]) < unsigned(cpu, cpu.x[o.rs2 as usize]) {
         true => cpu.pc = addr.wrapping_add(o.imm),
         _ => {}
     }

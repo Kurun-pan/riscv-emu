@@ -3,6 +3,7 @@ use crate::cpu::cpu_instruction::{Opecode, OPECODES, unsigned};
 use crate::cpu::trap::*;
 use crate::mmu::Mmu;
 
+#[derive(Clone)]
 pub enum Xlen {
     X32,
     X64,
@@ -54,6 +55,7 @@ impl Cpu {
 
     pub fn set_xlen(&mut self, xlen: Xlen) {
         self.xlen = xlen;
+        self.mmu.set_xlen(&self.xlen);
     }
 
     pub fn tick(&mut self) {

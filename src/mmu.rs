@@ -56,103 +56,118 @@ impl Mmu {
         self.privilege = privilege.clone();
     }
 
+    pub fn set_xlen(&mut self, xlen: &Xlen) {
+        self.xlen = xlen.clone();
+    }
+
     pub fn read8(&mut self, v_addr: u64) -> Result<u8, Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Read) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read8(p_addr),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn read16(&mut self, v_addr: u64) -> Result<u16, Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Read) {
+        let ev_addr = self.to_effective_address(v_addr);
+        println!("read16: {:x}, {:x}", v_addr, ev_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read16(p_addr),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn read32(&mut self, v_addr: u64) -> Result<u32, Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Read) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read32(p_addr),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn read64(&mut self, v_addr: u64) -> Result<u64, Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Read) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
             Ok(p_addr) => self.bus.read64(p_addr),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn write8(&mut self, v_addr: u64, val: u8) -> Result<(), Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Write) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write8(p_addr, val),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn write16(&mut self, v_addr: u64, val: u16) -> Result<(), Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Write) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write16(p_addr, val),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn write32(&mut self, v_addr: u64, val: u32) -> Result<(), Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Write) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write32(p_addr, val),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn write64(&mut self, v_addr: u64, val: u64) -> Result<(), Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Write) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
             Ok(p_addr) => self.bus.write64(p_addr, val),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     pub fn fetch32(&mut self, v_addr: u64) -> Result<u32, Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Fetch) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
             Ok(p_addr) => self.bus.read32(p_addr),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
 
     // Instruction fetch for compressed instruction.
     pub fn fetch16(&mut self, v_addr: u64) -> Result<u16, Trap> {
-        match self.to_physical_address(v_addr, MemoryAccessType::Fetch) {
+        let ev_addr = self.to_effective_address(v_addr);
+        match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
             Ok(p_addr) => self.bus.read16(p_addr),
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
-                value: v_addr,
+                value: ev_addr,
             }),
         }
     }
