@@ -234,11 +234,6 @@ lazy_static! {
             operation: xori,
             disassemble: disassemble_computation,
         });
-        m.insert(5, Instruction{
-            mnemonic: "srli",
-            operation: srli,
-            disassemble: disassemble_computation_shamt,
-        });
         m.insert(6, Instruction{
             mnemonic: "ori",
             operation: ori,
@@ -248,6 +243,20 @@ lazy_static! {
             mnemonic: "andi",
             operation: andi,
             disassemble: disassemble_computation,
+        });
+        m
+    };
+    pub static ref INSTRUCTIONS_GROUP13_SUB: HashMap<(u8, u8), Instruction> = {
+        let mut m = HashMap::new();
+        m.insert((0, 5), Instruction{
+            mnemonic: "srli",
+            operation: srli,
+            disassemble: disassemble_computation_shamt,
+        });
+        m.insert((32, 5), Instruction{
+            mnemonic: "srai",
+            operation: srai,
+            disassemble: disassemble_computation_shamt,
         });
         m
     };
@@ -502,9 +511,18 @@ fn opecode_0f(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
 
 fn opecode_13(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
-    match INSTRUCTIONS_GROUP13.get(&funct3) {
-        Some(instruction) => Ok(&instruction),
-        None => panic!("Not found instruction!"),
+    match funct3 {
+        5 => {
+            let funct7 = ((word & 0xfe000000) >> 25) as u8;
+            match INSTRUCTIONS_GROUP13_SUB.get(&(funct7, funct3)) {
+                Some(instruction) => Ok(&instruction),
+                None => panic!("Not found instruction!"),
+            }        
+        },
+        _ => match INSTRUCTIONS_GROUP13.get(&funct3) {
+            Some(instruction) => Ok(&instruction),
+            None => panic!("Not found instruction!"),
+        }
     }
 }
 
@@ -518,7 +536,7 @@ fn opecode_17(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
 
 fn opecode_1b(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
-    let funct7 = ((word & 0xe0000000) >> 25) as u8;
+    let funct7 = ((word & 0xfe000000) >> 25) as u8;
     match INSTRUCTIONS_GROUP1B.get(&(funct7, funct3)) {
         Some(instruction) => Ok(&instruction),
         None => panic!("Not found instruction!"),
@@ -543,7 +561,7 @@ fn opecode_27(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
 
 fn opecode_33(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
-    let funct7 = ((word & 0xe0000000) >> 25) as u8;
+    let funct7 = ((word & 0xfe000000) >> 25) as u8;
     match INSTRUCTIONS_GROUP33.get(&(funct7, funct3)) {
         Some(instruction) => Ok(&instruction),
         None => panic!("Not found instruction!"),
@@ -1011,7 +1029,18 @@ fn srli(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
         Xlen::X64 => (word >> 20) & 0x1f,
         Xlen::X32 => (word >> 20) & 0x3f,
     };
-    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] >> shamt;
+    cpu.x[o.rd as usize] = signed(cpu, (cpu.x[o.rs1 as usize] as u32 >> shamt) as i64);
+    Ok(())
+}
+
+/// [srai rd,rs1,shamt]
+fn srai(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_i(word);
+    let shamt = match cpu.xlen {
+        Xlen::X64 => (word >> 20) & 0x1f,
+        Xlen::X32 => (word >> 20) & 0x3f,
+    };
+    cpu.x[o.rd as usize] = signed(cpu, (cpu.x[o.rs1 as usize] as i32 >> shamt) as i64);
     Ok(())
 }
 
@@ -1059,23 +1088,32 @@ fn sub(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 }
 
 /// [sll rd,rs1,rs2]
+/// SLL, SRL, and SRA perform logical left, logical right, and arithmetic right shifts on the value in
+/// register rs1 by the shift amount held in the lower 5 bits of register rs2.
 fn sll(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    panic!("TODO");
+    cpu.x[o.rd as usize] = signed(cpu, cpu.x[o.rs1 as usize] << (cpu.x[o.rs2 as usize] & 0x1f));
     Ok(())
 }
 
 /// [slt rd,rs1,rs2]
 fn slt(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize].wrapping_add(cpu.x[o.rs2 as usize]);
+    cpu.x[o.rd as usize] = match cpu.x[o.rs1 as usize] < cpu.x[o.rs2 as usize] {
+        true => 1,
+        false => 0,
+    };
     Ok(())
 }
 
 /// [sltu rd,rs1,rs2]
 fn sltu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    panic!("TODO");
+    cpu.x[o.rd as usize] =
+        match unsigned(cpu, cpu.x[o.rs1 as usize]) < unsigned(cpu, cpu.x[o.rs2 as usize]) {
+            true => 1,
+            false => 0,
+        };
     Ok(())
 }
 
@@ -1089,14 +1127,21 @@ fn xor(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [srl rd,rs1,rs2]
 fn srl(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    panic!("TODO");
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        (cpu.x[o.rs1 as usize] as u32 >> (cpu.x[o.rs2 as usize] & 0x1f)) as i64,
+    );
     Ok(())
 }
 
 /// [sra rd,rs1,rs2]
 fn sra(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    panic!("TODO");
+    println!("SRA => {:x}, {:x}", cpu.x[o.rs1 as usize], cpu.x[o.rs2 as usize]);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        (cpu.x[o.rs1 as usize] as i32 >> (cpu.x[o.rs2 as usize] & 0x1f)) as i64,
+    );
     Ok(())
 }
 
