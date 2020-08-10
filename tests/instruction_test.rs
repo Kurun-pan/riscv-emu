@@ -39,6 +39,13 @@ fn instruction_test(filename: &'static str) -> u32 {
 }
 
 #[test]
-fn regression() {
-    assert_eq!(1, instruction_test("rv32ui-p-add"));
-}
+fn p_add() { assert_eq!(1, instruction_test("rv32ui-p-add")); }
+
+#[test]
+fn v_add() { assert_eq!(1, instruction_test("rv32ui-v-add")); }
+
+#[test]
+fn p_addi() { assert_eq!(1, instruction_test("rv32ui-p-addi")); }
+
+#[test]
+fn v_addi() { assert_eq!(1, instruction_test("rv32ui-v-addi")); }

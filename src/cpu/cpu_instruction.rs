@@ -810,7 +810,7 @@ fn disassemble_i(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_i(word);
     let mut s = String::new();
     s += &format!(
-        "{} {},{:016x}({})",
+        "{0: <10} {1: },{2:x}({3:})",
         mnemonic,
         REGISTERS.get(&o.rd).unwrap(),
         o.imm,
@@ -861,7 +861,7 @@ fn disassemble_store(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_s(word);
     let mut s = String::new();
     s += &format!(
-        "{} {},{:016x}({})",
+        "{0: <10} {1:},{2:x}({3:})",
         mnemonic,
         REGISTERS.get(&o.rs2).unwrap(),
         o.imm,
@@ -927,7 +927,7 @@ fn disassemble_precision_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_i(word);
     let mut s = String::new();
     s += &format!(
-        "{} {},{},{:016x}",
+        "{0: <10} {1:},{2:},{3:x}",
         mnemonic,
         REGISTERS.get(&o.rd).unwrap(),
         REGISTERS.get(&o.rs1).unwrap(),
@@ -990,8 +990,7 @@ fn slti(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sltiu rd,rs1,imm]
 fn sltiu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    cpu.x[o.rd as usize] = match unsigned(cpu, cpu.x[o.rs1 as usize]) < unsigned(cpu, o.imm)
-    {
+    cpu.x[o.rd as usize] = match unsigned(cpu, cpu.x[o.rs1 as usize]) < unsigned(cpu, o.imm) {
         true => 1,
         false => 0,
     };
@@ -1116,7 +1115,7 @@ fn disassemble_computation(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_i(word);
     let mut s = String::new();
     s += &format!(
-        "{} {},{},{}",
+        "{0: <10} {1:},{2:},{3:x}",
         mnemonic,
         REGISTERS.get(&o.rd).unwrap(),
         REGISTERS.get(&o.rs1).unwrap(),
@@ -1133,7 +1132,7 @@ fn disassemble_computation_shamt(cpu: &Cpu, mnemonic: &str, word: u32) -> String
     };
     let mut s = String::new();
     s += &format!(
-        "{} {},{},{}",
+        "{0: <10} {1:},{2:},{3:}",
         mnemonic,
         REGISTERS.get(&o.rd).unwrap(),
         REGISTERS.get(&o.rs1).unwrap(),
@@ -1145,7 +1144,12 @@ fn disassemble_computation_shamt(cpu: &Cpu, mnemonic: &str, word: u32) -> String
 fn disassemble_u(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_u(word);
     let mut s = String::new();
-    s += &format!("{} {},{}", mnemonic, REGISTERS.get(&o.rd).unwrap(), o.imm);
+    s += &format!(
+        "{0: <10} {1:},{2:x}",
+        mnemonic,
+        REGISTERS.get(&o.rd).unwrap(),
+        o.imm
+    );
     s
 }
 
@@ -1153,7 +1157,7 @@ fn disassemble_r(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_r(word);
     let mut s = String::new();
     s += &format!(
-        "{} {},{},{}",
+        "{0: <10} {1:},{2:},{3:}",
         mnemonic,
         REGISTERS.get(&o.rd).unwrap(),
         REGISTERS.get(&o.rs1).unwrap(),
@@ -1294,7 +1298,12 @@ fn bgeu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn disassemble_j(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_j(word);
     let mut s = String::new();
-    s += &format!("{} {},{}", mnemonic, REGISTERS.get(&o.rd).unwrap(), o.imm);
+    s += &format!(
+        "{0: <10} {1:},{2:}",
+        mnemonic,
+        REGISTERS.get(&o.rd).unwrap(),
+        o.imm
+    );
     s
 }
 
@@ -1302,7 +1311,7 @@ fn disassemble_b(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_b(word);
     let mut s = String::new();
     s += &format!(
-        "{} {},{},{}",
+        "{0: <10} {1:},{2:},{3:x}",
         mnemonic,
         REGISTERS.get(&o.rs1).unwrap(),
         REGISTERS.get(&o.rs2).unwrap(),
@@ -1448,7 +1457,7 @@ fn disassemble_csr(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_csr(word);
     let mut s = String::new();
     s += &format!(
-        "{} {},{},{}",
+        "{0: <10} {1:},{2:x},{3:}",
         mnemonic,
         REGISTERS.get(&o.rd).unwrap(),
         o.csr,
@@ -1513,6 +1522,7 @@ fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
     ); // set 1 to MPIE
 
     // update privilege by MPP.
+    // TODO: refactoring.
     cpu.privilege = match mpp {
         0 => Privilege::User,
         1 => Privilege::Supervisor,

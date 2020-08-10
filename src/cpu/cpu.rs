@@ -81,7 +81,7 @@ impl Cpu {
         };
 
         // instruction decode.
-        print!(" 0x{:016x}: {:08x}    ", instruction_addr, word);
+        print!(" [PC]{:016x}:    {:08x}    ", instruction_addr, word);
         let instruction = match self.decode(word) {
             Ok(opecode) => match (opecode.operation)(self, instruction_addr, word) {
                 Ok(_instruction) => _instruction,
@@ -136,40 +136,8 @@ impl Cpu {
     }
 
     fn catch_exception(&mut self, trap: Trap, addr: u64) {
-        println!("  >> Exception: {:?}", trap.exception);
-
+        println!("  >> Exception: {:?} ({:?})", trap.exception, self.privilege);
         let exception_code = trap.exception as u64 as u8;
-
-        // update CSR/xEPC, xCAUSE, xTVAL registers.
-        {
-            self.csr.write_direct(match self.privilege {
-                Privilege::User => CSR_UEPC,
-                Privilege::Supervisor => CSR_SEPC,
-                Privilege::Hypervisor => CSR_HEPC,
-                Privilege::Machine => CSR_MEPC,
-            }, addr);
-
-            let cause = match self.xlen {
-                Xlen::X32 => 0x80000000,
-                Xlen::X64 => 0x80000000_00000000
-            } | exception_code as u64;
-            self.csr.write_direct(match self.privilege {
-                Privilege::User => CSR_UCAUSE,
-                Privilege::Supervisor => CSR_SCAUSE,
-                Privilege::Hypervisor => CSR_HCAUSE,
-                Privilege::Machine => CSR_MCAUSE,
-            }, cause);
-
-            self.csr.write_direct(match self.privilege {
-                Privilege::User => CSR_UTVAL,
-                Privilege::Supervisor => CSR_STVAL,
-                Privilege::Hypervisor => CSR_HTVAL,
-                Privilege::Machine => CSR_MTVAL,
-            }, trap.value);
-
-            // update MSTATUS register.
-            // TODO:!!
-        }
 
         // change privilege.
         {
@@ -187,6 +155,7 @@ impl Cpu {
                 false => Privilege::Machine,
             };
             self.privilege = next_privilege;
+            self.mmu.set_privilege(&self.privilege);
         }
 
         // set exeption vectior address to PC.
@@ -197,6 +166,40 @@ impl Cpu {
             Privilege::Machine => CSR_MTVEC,
         });
         self.pc = unsigned(self, self.pc as i64);
+
+        // update CSR/xEPC, xCAUSE, xTVAL registers.
+        {
+            self.csr.write_direct(match self.privilege {
+                Privilege::User => CSR_UEPC,
+                Privilege::Supervisor => CSR_SEPC,
+                Privilege::Hypervisor => CSR_HEPC,
+                Privilege::Machine => CSR_MEPC,
+            }, addr);
+
+            /*
+            let cause = match self.xlen {
+                Xlen::X32 => 0x80000000,
+                Xlen::X64 => 0x80000000_00000000
+            } | exception_code as u64;
+            */
+            let cause = exception_code as u64;
+            self.csr.write_direct(match self.privilege {
+                Privilege::User => CSR_UCAUSE,
+                Privilege::Supervisor => CSR_SCAUSE,
+                Privilege::Hypervisor => CSR_HCAUSE,
+                Privilege::Machine => CSR_MCAUSE,
+            }, cause);
+
+            self.csr.write_direct(match self.privilege {
+                Privilege::User => CSR_UTVAL,
+                Privilege::Supervisor => CSR_STVAL,
+                Privilege::Hypervisor => CSR_HTVAL,
+                Privilege::Machine => CSR_MTVAL,
+            }, trap.value);
+
+            // update MSTATUS register.
+            // TODO:!!
+        }
     }
 
     fn interrupt_handler(&mut self) {
