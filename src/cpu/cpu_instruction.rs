@@ -105,6 +105,7 @@ lazy_static! {
         m.insert(0x27, Opecode {operation: opecode_27});
         m.insert(0x33, Opecode {operation: opecode_33});
         m.insert(0x37, Opecode {operation: opecode_37});
+        m.insert(0x3b, Opecode {operation: opecode_3b});
         m.insert(0x63, Opecode {operation: opecode_63});
         m.insert(0x67, Opecode {operation: opecode_67});
         m.insert(0x6F, Opecode {operation: opecode_6f});
@@ -272,31 +273,35 @@ lazy_static! {
     };
 
     // RV64I Integer Register-Immediate Instructions.
-    pub static ref INSTRUCTIONS_GROUP1B: HashMap<(u8, u8), Instruction> = {
+    pub static ref INSTRUCTIONS_GROUP1B: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
-        m.insert((0, 0), Instruction{
+        m.insert(0, Instruction{
             mnemonic: "addiw",
             operation: addiw,
             disassemble: disassemble_computation,
         });
-        m.insert((0, 1), Instruction{
+        m.insert(1, Instruction{
             mnemonic: "slliw",
             operation: slliw,
             disassemble: disassemble_computation,
         });
+        m
+    };
+
+    pub static ref INSTRUCTIONS_GROUP1B_SUB: HashMap<(u8, u8), Instruction> = {
+        let mut m = HashMap::new();
         m.insert((0, 5), Instruction{
             mnemonic: "srliw",
             operation: srliw,
             disassemble: disassemble_computation_shamt,
         });
-        m.insert((8, 5), Instruction{
+        m.insert((32, 5), Instruction{
             mnemonic: "sraiw",
             operation: sraiw,
             disassemble: disassemble_computation_shamt,
         });
         m
     };
-
     // RV32I/RV64I Store Instructions.
     pub static ref INSTRUCTIONS_GROUP23: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
@@ -373,6 +378,36 @@ lazy_static! {
         m.insert((0, 7), Instruction{
             mnemonic: "and",
             operation: and,
+            disassemble: disassemble_r,
+        });
+        m
+    };
+
+    pub static ref INSTRUCTIONS_GROUP3B: HashMap<(u8, u8), Instruction> = {
+        let mut m = HashMap::new();
+        m.insert((0, 0), Instruction{
+            mnemonic: "addw",
+            operation: addw,
+            disassemble: disassemble_r,
+        });
+        m.insert((32, 0), Instruction{
+            mnemonic: "subw",
+            operation: subw,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 1), Instruction{
+            mnemonic: "sllw",
+            operation: sllw,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 5), Instruction{
+            mnemonic: "srlw",
+            operation: srlw,
+            disassemble: disassemble_r,
+        });
+        m.insert((32, 5), Instruction{
+            mnemonic: "sraw",
+            operation: sraw,
             disassemble: disassemble_r,
         });
         m
@@ -517,12 +552,12 @@ fn opecode_13(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
             match INSTRUCTIONS_GROUP13_SUB.get(&(funct7, funct3)) {
                 Some(instruction) => Ok(&instruction),
                 None => panic!("Not found instruction!"),
-            }        
-        },
+            }
+        }
         _ => match INSTRUCTIONS_GROUP13.get(&funct3) {
             Some(instruction) => Ok(&instruction),
             None => panic!("Not found instruction!"),
-        }
+        },
     }
 }
 
@@ -536,10 +571,18 @@ fn opecode_17(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
 
 fn opecode_1b(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
-    let funct7 = ((word & 0xfe000000) >> 25) as u8;
-    match INSTRUCTIONS_GROUP1B.get(&(funct7, funct3)) {
-        Some(instruction) => Ok(&instruction),
-        None => panic!("Not found instruction!"),
+    match funct3 {
+        5 => {
+            let funct7 = ((word & 0xfe000000) >> 25) as u8;
+            match INSTRUCTIONS_GROUP1B_SUB.get(&(funct7, funct3)) {
+                Some(instruction) => Ok(&instruction),
+                None => panic!("Not found instruction!"),
+            }
+        }
+        _ => match INSTRUCTIONS_GROUP1B.get(&funct3) {
+            Some(instruction) => Ok(&instruction),
+            None => panic!("Not found instruction!"),
+        },
     }
 }
 
@@ -574,6 +617,15 @@ fn opecode_37(_cpu: &Cpu, _addr: u64, _word: u32) -> Result<&Instruction, ()> {
         operation: lui,
         disassemble: disassemble_u,
     })
+}
+
+fn opecode_3b(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
+    let funct3 = ((word & 0x00007000) >> 12) as u8;
+    let funct7 = ((word & 0xfe000000) >> 25) as u8;
+    match INSTRUCTIONS_GROUP3B.get(&(funct7, funct3)) {
+        Some(instruction) => Ok(&instruction),
+        None => panic!("Not found instruction!"),
+    }
 }
 
 fn opecode_63(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
@@ -988,8 +1040,8 @@ fn addi(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 fn slli(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = match cpu.xlen {
-        Xlen::X64 => (word >> 20) & 0x1f,
-        Xlen::X32 => (word >> 20) & 0x3f,
+        Xlen::X64 => (word >> 20) & 0x3f,
+        Xlen::X32 => (word >> 20) & 0x1f,
     };
     cpu.x[o.rd as usize] = signed(cpu, cpu.x[o.rs1 as usize] << shamt);
     Ok(())
@@ -1026,10 +1078,10 @@ fn xori(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 fn srli(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = match cpu.xlen {
-        Xlen::X64 => (word >> 20) & 0x1f,
-        Xlen::X32 => (word >> 20) & 0x3f,
+        Xlen::X64 => (word >> 20) & 0x3f,
+        Xlen::X32 => (word >> 20) & 0x1f,
     };
-    cpu.x[o.rd as usize] = signed(cpu, (cpu.x[o.rs1 as usize] as u32 >> shamt) as i64);
+    cpu.x[o.rd as usize] = signed(cpu, (unsigned(cpu, cpu.x[o.rs1 as usize]) >> shamt) as i64);
     Ok(())
 }
 
@@ -1037,10 +1089,10 @@ fn srli(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 fn srai(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
     let shamt = match cpu.xlen {
-        Xlen::X64 => (word >> 20) & 0x1f,
-        Xlen::X32 => (word >> 20) & 0x3f,
+        Xlen::X64 => (word >> 20) & 0x3f,
+        Xlen::X32 => (word >> 20) & 0x1f,
     };
-    cpu.x[o.rd as usize] = signed(cpu, (cpu.x[o.rs1 as usize] as i32 >> shamt) as i64);
+    cpu.x[o.rd as usize] = signed(cpu, (cpu.x[o.rs1 as usize] >> shamt) as i64);
     Ok(())
 }
 
@@ -1092,7 +1144,11 @@ fn sub(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// register rs1 by the shift amount held in the lower 5 bits of register rs2.
 fn sll(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    cpu.x[o.rd as usize] = signed(cpu, cpu.x[o.rs1 as usize] << (cpu.x[o.rs2 as usize] & 0x1f));
+    let shamt = match cpu.xlen {
+        Xlen::X64 => cpu.x[o.rs2 as usize] & 0x3f,
+        Xlen::X32 => cpu.x[o.rs2 as usize] & 0x1f,
+    };
+    cpu.x[o.rd as usize] = signed(cpu, cpu.x[o.rs1 as usize] << shamt);
     Ok(())
 }
 
@@ -1127,21 +1183,22 @@ fn xor(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [srl rd,rs1,rs2]
 fn srl(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    cpu.x[o.rd as usize] = signed(
-        cpu,
-        (cpu.x[o.rs1 as usize] as u32 >> (cpu.x[o.rs2 as usize] & 0x1f)) as i64,
-    );
+    let shamt = match cpu.xlen {
+        Xlen::X64 => cpu.x[o.rs2 as usize] & 0x3f,
+        Xlen::X32 => cpu.x[o.rs2 as usize] & 0x1f,
+    };
+    cpu.x[o.rd as usize] = signed(cpu, (unsigned(cpu, cpu.x[o.rs1 as usize]) >> shamt) as i64);
     Ok(())
 }
 
 /// [sra rd,rs1,rs2]
 fn sra(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    println!("SRA => {:x}, {:x}", cpu.x[o.rs1 as usize], cpu.x[o.rs2 as usize]);
-    cpu.x[o.rd as usize] = signed(
-        cpu,
-        (cpu.x[o.rs1 as usize] as i32 >> (cpu.x[o.rs2 as usize] & 0x1f)) as i64,
-    );
+    let shamt = match cpu.xlen {
+        Xlen::X64 => cpu.x[o.rs2 as usize] & 0x3f,
+        Xlen::X32 => cpu.x[o.rs2 as usize] & 0x1f,
+    };
+    cpu.x[o.rd as usize] = signed(cpu, (signed(cpu, cpu.x[o.rs1 as usize]) >> shamt) as i64);
     Ok(())
 }
 
@@ -1156,6 +1213,54 @@ fn or(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 fn and(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
     cpu.x[o.rd as usize] = cpu.x[o.rs1 as usize] & cpu.x[o.rs2 as usize];
+    Ok(())
+}
+
+/// [addw rd,rs1,rs2]
+fn addw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        cpu.x[o.rs1 as usize].wrapping_add(cpu.x[o.rs2 as usize]),
+    ) as i32 as i64;
+    Ok(())
+}
+
+/// [subw rd,rs1,rs2]
+fn subw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        cpu.x[o.rs1 as usize].wrapping_sub(cpu.x[o.rs2 as usize]),
+    ) as i32 as i64;
+    Ok(())
+}
+
+/// [sllw rd,rs1,rs2]
+fn sllw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] =
+        signed(cpu, cpu.x[o.rs1 as usize] << (cpu.x[o.rs2 as usize] & 0x1f)) as i32 as i64;
+    Ok(())
+}
+
+/// [srlw rd,rs1,rs2]
+fn srlw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        (cpu.x[o.rs1 as usize] as u32 >> (cpu.x[o.rs2 as usize] & 0x1f)) as i64,
+    ) as i32 as i64;
+    Ok(())
+}
+
+/// [sraw rd,rs1,rs2]
+fn sraw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        (cpu.x[o.rs1 as usize] as i32 >> (cpu.x[o.rs2 as usize] & 0x1f)) as i64,
+    ) as i32 as i64;
     Ok(())
 }
 
@@ -1175,8 +1280,8 @@ fn disassemble_computation(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 fn disassemble_computation_shamt(cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     let o = parse_type_i(word);
     let shamt = match cpu.xlen {
-        Xlen::X64 => (word >> 20) & 0x1f,
-        Xlen::X32 => (word >> 20) & 0x3f,
+        Xlen::X64 => (word >> 20) & 0x3f,
+        Xlen::X32 => (word >> 20) & 0x1f,
     };
     let mut s = String::new();
     s += &format!(
@@ -1234,7 +1339,7 @@ fn addiw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// SRAIW encodings with imm[5] ̸= 0 are reserved.
 fn slliw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    let shamt = (word >> 20) & 0x1f;
+    let shamt = (word >> 20) & 0x3f;
     cpu.x[o.rd as usize] = (cpu.x[o.rs1 as usize] << shamt) as i32 as i64;
     Ok(())
 }
@@ -1242,7 +1347,7 @@ fn slliw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [srliw rd,rs1,shamt]
 fn srliw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    let shamt = (word >> 20) & 0x1f;
+    let shamt = (word >> 20) & 0x3f;
     cpu.x[o.rd as usize] = ((cpu.x[o.rs1 as usize] as u32) >> shamt) as i32 as i64;
     Ok(())
 }
