@@ -430,6 +430,11 @@ lazy_static! {
             operation: addw,
             disassemble: disassemble_r,
         });
+        m.insert((1, 0), Instruction{
+            mnemonic: "mulw",
+            operation: mulw,
+            disassemble: disassemble_r,
+        });
         m.insert((32, 0), Instruction{
             mnemonic: "subw",
             operation: subw,
@@ -440,14 +445,34 @@ lazy_static! {
             operation: sllw,
             disassemble: disassemble_r,
         });
+        m.insert((1, 4), Instruction{
+            mnemonic: "divw",
+            operation: divw,
+            disassemble: disassemble_r,
+        });
         m.insert((0, 5), Instruction{
             mnemonic: "srlw",
             operation: srlw,
             disassemble: disassemble_r,
         });
+        m.insert((1, 5), Instruction{
+            mnemonic: "divuw",
+            operation: divuw,
+            disassemble: disassemble_r,
+        });
         m.insert((32, 5), Instruction{
             mnemonic: "sraw",
             operation: sraw,
+            disassemble: disassemble_r,
+        });
+        m.insert((1, 6), Instruction{
+            mnemonic: "remw",
+            operation: remw,
+            disassemble: disassemble_r,
+        });
+        m.insert((1, 7), Instruction{
+            mnemonic: "remuw",
+            operation: remuw,
             disassemble: disassemble_r,
         });
         m
@@ -1767,52 +1792,45 @@ fn mul(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [mulh rd,rs1,rs2]
 fn mulh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    let t = cpu.x[o.rs1 as usize].wrapping_mul(cpu.x[o.rs2 as usize]);
-    cpu.x[o.rd as usize] = signed(
-        cpu,
-        match cpu.xlen {
-            Xlen::X64 => t,
-            _ => signed(cpu, t >> 32),
-        },
-    );
+    let a = cpu.x[o.rs1 as usize];
+    let b = cpu.x[o.rs2 as usize];
+    cpu.x[o.rd as usize] = match cpu.xlen {
+        Xlen::X64 => ((a as i128).wrapping_mul(b as i128) >> 64) as i64,
+        _ => (a.wrapping_mul(b) >> 32) as i32 as i64,
+    };
     Ok(())
 }
 
 /// [mulhsu rd,rs1,rs2]
 fn mulhsu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    cpu.x[o.rd as usize] = signed(
-        cpu,
-        match cpu.xlen {
-            Xlen::X64 => {
-                ((cpu.x[o.rs1 as usize] as i128 * (cpu.x[o.rs2 as usize] as u64 as i128)) >> 64)
-                    as i64
-            }
-            _ => {
-                (((cpu.x[o.rs1 as usize] as i32 as i64) * (cpu.x[o.rs2 as usize] as u32 as i64))
-                    >> 32) as i64
-            }
-        },
-    );
+    let a = cpu.x[o.rs1 as usize];
+    let b = cpu.x[o.rs2 as usize] as u64;
+    cpu.x[o.rd as usize] = match cpu.xlen {
+        Xlen::X64 => ((a as i128).wrapping_mul(b as i128) >> 64) as i64,
+        _ => ((a as i32 as i64).wrapping_mul(b as u32 as i64) >> 32) as i64
+    };
     Ok(())
 }
 
 /// [mulhu rd,rs1,rs2]
 fn mulhu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
+    let a = cpu.x[o.rs1 as usize] as u64;
+    let b = cpu.x[o.rs2 as usize] as u64;
+    cpu.x[o.rd as usize] = match cpu.xlen {
+        Xlen::X64 => ((a as u128).wrapping_mul(b as u128) >> 64) as i64,
+        _ => ((a as u32 as u64).wrapping_mul(b as u32 as u64) >> 32) as i32 as i64
+    };
+    Ok(())
+}
+
+/// [mulw rd,rs1,rs2]
+fn mulw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
     cpu.x[o.rd as usize] = signed(
         cpu,
-        match cpu.xlen {
-            Xlen::X64 => {
-                ((cpu.x[o.rs1 as usize] as u128).wrapping_mul(cpu.x[o.rs2 as usize] as u128) >> 64)
-                    as i64
-            }
-            _ => {
-                ((cpu.x[o.rs1 as usize] as u32 as u64)
-                    .wrapping_mul(cpu.x[o.rs2 as usize] as u32 as u64)
-                    >> 32) as i64
-            }
-        },
+        cpu.x[o.rs1 as usize].wrapping_mul(cpu.x[o.rs2 as usize]) as u32 as i64,
     );
     Ok(())
 }
@@ -1844,15 +1862,44 @@ fn divu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     Ok(())
 }
 
+/// [divw rd,rs1,rs2]
+fn divw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let numerator = cpu.x[o.rs1 as usize] as i32;
+    let denominator = cpu.x[o.rs2 as usize] as i32;
+    cpu.x[o.rd as usize] = match denominator {
+        0 => -1,
+        _ => numerator.wrapping_div(denominator) as i64,
+    };
+    Ok(())
+}
+
+/// [divuw rd,rs1,rs2]
+fn divuw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let numerator = cpu.x[o.rs1 as usize] as u32;
+    let denominator = cpu.x[o.rs2 as usize] as u32;
+    cpu.x[o.rd as usize] = match denominator {
+        0 => -1,
+        _ => numerator.wrapping_div(denominator) as i32 as i64,
+    };
+    Ok(())
+}
+
 /// [rem rd,rs1,rs2]
 /// REM and REMU provide the remainder of the corresponding division operation.
 /// For REM, the sign of the result equals the sign of the dividend.
 fn rem(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_r(word);
-    cpu.x[o.rd as usize] = match cpu.x[o.rs2 as usize] {
-        0 => cpu.x[o.rs1 as usize],
-        _ => signed(cpu, cpu.x[o.rs1 as usize] % cpu.x[o.rs2 as usize]),
-    };
+    let numerator = cpu.x[o.rs1 as usize];
+    let denominator = cpu.x[o.rs2 as usize];
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        match denominator {
+            0 => numerator,
+            _ => cpu.x[o.rs1 as usize].wrapping_rem(cpu.x[o.rs2 as usize]),
+        },
+    );
     Ok(())
 }
 
@@ -1865,8 +1912,32 @@ fn remu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
         cpu,
         match denominator {
             0 => numerator,
-            _ => numerator % denominator,
+            _ => numerator.wrapping_rem(denominator),
         } as i64,
     );
+    Ok(())
+}
+
+/// [remw rd,rs1,rs2]
+fn remw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let numerator = cpu.x[o.rs1 as usize] as i32;
+    let denominator = cpu.x[o.rs2 as usize] as i32;
+    cpu.x[o.rd as usize] = match denominator {
+        0 => numerator as i64,
+        _ => numerator.wrapping_rem(denominator) as i64,
+    };
+    Ok(())
+}
+
+/// [remuw rd,rs1,rs2]
+fn remuw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let numerator = cpu.x[o.rs1 as usize] as u32;
+    let denominator = cpu.x[o.rs2 as usize] as u32;
+    cpu.x[o.rd as usize] = match denominator {
+        0 => numerator as i32 as i64,
+        _ => numerator.wrapping_rem(denominator) as i32 as i64,
+    };
     Ok(())
 }
