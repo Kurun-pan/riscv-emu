@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::cpu::cpu::{Privilege, Xlen};
 use crate::cpu::trap::*;
 use crate::system_bus::SystemBus;
@@ -19,6 +21,7 @@ pub struct Mmu {
     ppn: u64,
     addressing_mode: AddressingMode,
     privilege: Privilege,
+    reserved_address: HashMap<u64, bool>,
 }
 
 struct Pte {
@@ -49,6 +52,7 @@ impl Mmu {
             ppn: 0,
             addressing_mode: AddressingMode::Bare,
             privilege: Privilege::Machine,
+            reserved_address: HashMap::new(),
         }
     }
 
@@ -58,6 +62,20 @@ impl Mmu {
 
     pub fn set_xlen(&mut self, xlen: &Xlen) {
         self.xlen = xlen.clone();
+    }
+
+    pub fn set_address_reserve(&mut self, addr: u64, request_reserve: bool) {
+        match request_reserve {
+            true => self.reserved_address.insert(addr, true),
+            false => self.reserved_address.remove(&addr)
+        };
+    }
+
+    pub fn is_address_reserved(&mut self, addr: u64) -> bool {
+        match self.reserved_address.get_mut(&addr) {
+            Some(_v) => true,
+            _ => false
+        }
     }
 
     pub fn read8(&mut self, v_addr: u64) -> Result<u8, Trap> {

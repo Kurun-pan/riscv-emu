@@ -13,7 +13,7 @@
 - [ ] RV32F
 - [ ] RV32D
 - [ ] RV32V
-- [ ] RV32A
+- [x] RV32A
 - [ ] RV32C
 
 ### 64-bit
@@ -23,7 +23,7 @@
 - [ ] RV64F
 - [ ] RV64D
 - [ ] RV64V
-- [ ] RV64A
+- [x] RV64A
 - [ ] RV64C
 
 ## Surpport Virtual Memory
@@ -31,8 +31,8 @@
 - [x] SV32
 - [x] SV39
 - [ ] SV48
-- [ ] Sv57
-- [ ] Sv64
+- [ ] SV57
+- [ ] SV64
 
 # Tests
 

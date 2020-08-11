@@ -103,6 +103,7 @@ lazy_static! {
         m.insert(0x1b, Opecode {operation: opecode_1b});
         m.insert(0x23, Opecode {operation: opecode_23});
         m.insert(0x27, Opecode {operation: opecode_27});
+        m.insert(0x2f, Opecode {operation: opecode_2f});
         m.insert(0x33, Opecode {operation: opecode_33});
         m.insert(0x37, Opecode {operation: opecode_37});
         m.insert(0x3b, Opecode {operation: opecode_3b});
@@ -324,6 +325,121 @@ lazy_static! {
             mnemonic: "sd",
             operation: sd,
             disassemble: disassemble_store,
+        });
+        m
+    };
+
+    pub static ref INSTRUCTIONS_GROUP2F: HashMap<(u8, u8), Instruction> = {
+        let mut m = HashMap::new();
+        m.insert((2, 2), Instruction{
+            mnemonic: "lr.w",
+            operation: lr_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((3, 2), Instruction{
+            mnemonic: "sc.w",
+            operation: sc_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((1, 2), Instruction{
+            mnemonic: "amoswap.w",
+            operation: amoswap_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 2), Instruction{
+            mnemonic: "amoadd.w",
+            operation: amoadd_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((4, 2), Instruction{
+            mnemonic: "amoxor.w",
+            operation: amoxor_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((12, 2), Instruction{
+            mnemonic: "amoand.w",
+            operation: amoand_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((8, 2), Instruction{
+            mnemonic: "amoor.w",
+            operation: amoor_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((16, 2), Instruction{
+            mnemonic: "amomin.w",
+            operation: amomin_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((20, 2), Instruction{
+            mnemonic: "amomax.w",
+            operation: amomax_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((24, 2), Instruction{
+            mnemonic: "amominu.w",
+            operation: amominu_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((28, 2), Instruction{
+            mnemonic: "amomaxu.w",
+            operation: amomaxu_w,
+            disassemble: disassemble_r,
+        });
+        m.insert((2, 3), Instruction{
+            mnemonic: "lr.d",
+            operation: lr_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((3, 3), Instruction{
+            mnemonic: "sc.d",
+            operation: sc_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((1, 3), Instruction{
+            mnemonic: "amoswap.d",
+            operation: amoswap_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((0, 3), Instruction{
+            mnemonic: "amoadd.d",
+            operation: amoadd_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((4, 3), Instruction{
+            mnemonic: "amoxor.d",
+            operation: amoxor_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((12, 3), Instruction{
+            mnemonic: "amoand.d",
+            operation: amoand_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((8, 3), Instruction{
+            mnemonic: "amoor.d",
+            operation: amoor_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((16, 3), Instruction{
+            mnemonic: "amomin.d",
+            operation: amomin_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((20, 3), Instruction{
+            mnemonic: "amomax.d",
+            operation: amomax_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((24, 3), Instruction{
+            mnemonic: "amominu.d",
+            operation: amominu_d,
+            disassemble: disassemble_r,
+        });
+        m.insert((28, 3), Instruction{
+            mnemonic: "amomaxu.d",
+            operation: amomaxu_d,
+            disassemble: disassemble_r,
         });
         m
     };
@@ -662,6 +778,15 @@ fn opecode_23(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
 fn opecode_27(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match INSTRUCTIONS_GROUP27.get(&funct3) {
+        Some(instruction) => Ok(&instruction),
+        None => panic!("Not found instruction!"),
+    }
+}
+
+fn opecode_2f(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
+    let funct3 = ((word & 0x00007000) >> 12) as u8;
+    let funct7 = ((word & 0xf8000000) >> 27) as u8;
+    match INSTRUCTIONS_GROUP2F.get(&(funct7, funct3)) {
         Some(instruction) => Ok(&instruction),
         None => panic!("Not found instruction!"),
     }
@@ -1808,7 +1933,7 @@ fn mulhsu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let b = cpu.x[o.rs2 as usize] as u64;
     cpu.x[o.rd as usize] = match cpu.xlen {
         Xlen::X64 => ((a as i128).wrapping_mul(b as i128) >> 64) as i64,
-        _ => ((a as i32 as i64).wrapping_mul(b as u32 as i64) >> 32) as i64
+        _ => ((a as i32 as i64).wrapping_mul(b as u32 as i64) >> 32) as i64,
     };
     Ok(())
 }
@@ -1820,7 +1945,7 @@ fn mulhu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let b = cpu.x[o.rs2 as usize] as u64;
     cpu.x[o.rd as usize] = match cpu.xlen {
         Xlen::X64 => ((a as u128).wrapping_mul(b as u128) >> 64) as i64,
-        _ => ((a as u32 as u64).wrapping_mul(b as u32 as u64) >> 32) as i32 as i64
+        _ => ((a as u32 as u64).wrapping_mul(b as u32 as u64) >> 32) as i32 as i64,
     };
     Ok(())
 }
@@ -1939,5 +2064,407 @@ fn remuw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
         0 => numerator as i32 as i64,
         _ => numerator.wrapping_rem(denominator) as i32 as i64,
     };
+    Ok(())
+}
+
+//==============================================================================
+// Specifying Ordering of Atomic Instructions (RV32A/RV64A)
+//==============================================================================
+
+/// [lr.w rd,rs1]
+fn lr_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let addr = cpu.x[o.rs1 as usize] as u64;
+    let data = match cpu.mmu.read32(addr) {
+        Ok(d) => d as i32 as i64,
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = data;
+    cpu.mmu.set_address_reserve(addr, true);
+    Ok(())
+}
+
+/// [sc.w rd,rs1,rs2]
+fn sc_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let addr = cpu.x[o.rs1 as usize] as u64;
+    let data = cpu.x[o.rs2 as usize] as u32;
+    cpu.x[o.rd as usize] = match cpu.mmu.is_address_reserved(addr) {
+        true => match cpu.mmu.write32(addr, data) {
+            Ok(()) => {
+                cpu.mmu.set_address_reserve(addr, false);
+                0
+            }
+            Err(e) => return Err(e),
+        },
+        false => 1,
+    };
+    Ok(())
+}
+
+/// [amoswap.w rd,rs2,(rs1)]
+fn amoswap_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize] as u32;
+    match cpu.mmu.write32(cpu.x[o.rs1 as usize] as u64, x) {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t as i32 as i64;
+    Ok(())
+}
+
+/// [amoadd.w rd,rs2,(rs1)]
+fn amoadd_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i32 as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu.mmu.write32(
+        cpu.x[o.rs1 as usize] as u64,
+        signed(cpu, t.wrapping_add(x)) as u32,
+    ) {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amoxor.w rd,rs2,(rs1)]
+fn amoxor_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i32 as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write32(cpu.x[o.rs1 as usize] as u64, signed(cpu, t ^ x) as u32)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amoand.w rd,rs2,(rs1)]
+fn amoand_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i32 as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write32(cpu.x[o.rs1 as usize] as u64, signed(cpu, t & x) as u32)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amoor.w rd,rs2,(rs1)]
+fn amoor_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i32 as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write32(cpu.x[o.rs1 as usize] as u64, signed(cpu, t | x) as u32)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amomin.w rd,rs2,(rs1)]
+fn amomin_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i32 as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write32(cpu.x[o.rs1 as usize] as u64, std::cmp::min(t, x) as u32)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amomax.w rd,rs2,(rs1)]
+fn amomax_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i32 as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write32(cpu.x[o.rs1 as usize] as u64, std::cmp::max(t, x) as u32)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amominu.w rd,rs2,(rs1)]
+fn amominu_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize] as u32;
+    match cpu
+        .mmu
+        .write32(cpu.x[o.rs1 as usize] as u64, std::cmp::min(t, x))
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t as i32 as i64;
+    Ok(())
+}
+
+/// [amomaxu.w rd,rs2,(rs1)]
+fn amomaxu_w(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read32(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize] as u32;
+    match cpu
+        .mmu
+        .write32(cpu.x[o.rs1 as usize] as u64, std::cmp::max(t, x))
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t as i32 as i64;
+    Ok(())
+}
+
+/// [lr.d rd,rs1]
+fn lr_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let addr = cpu.x[o.rs1 as usize] as u64;
+    let data = match cpu.mmu.read64(addr) {
+        Ok(d) => d as i64,
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = data;
+    cpu.mmu.set_address_reserve(addr, true);
+    Ok(())
+}
+
+/// [sc.d rd,rs1,rs2]
+fn sc_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let addr = cpu.x[o.rs1 as usize] as u64;
+    let data = cpu.x[o.rs2 as usize] as u64;
+    cpu.x[o.rd as usize] = match cpu.mmu.is_address_reserved(addr) {
+        true => match cpu.mmu.write64(addr, data) {
+            Ok(()) => {
+                cpu.mmu.set_address_reserve(addr, false);
+                0
+            }
+            Err(_e) => 1,
+        },
+        false => panic!("{:x} is not reserved!!"),
+    };
+    Ok(())
+}
+
+/// [amoswap.d rd,rs2,(rs1)]
+fn amoswap_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize] as u64;
+    match cpu.mmu.write64(cpu.x[o.rs1 as usize] as u64, x) {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t as i64;
+    Ok(())
+}
+
+/// [amoadd.d rd,rs2,(rs1)]
+fn amoadd_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, t.wrapping_add(x) as u64)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amoxor.d rd,rs2,(rs1)]
+fn amoxor_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, (t ^ x) as u64)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amoand.d rd,rs2,(rs1)]
+fn amoand_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, (t & x) as u64)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amoor.d rd,rs2,(rs1)]
+fn amoor_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, (t | x) as u64)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amomin.d rd,rs2,(rs1)]
+fn amomin_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, std::cmp::min(t, x) as u64)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amomax.d rd,rs2,(rs1)]
+fn amomax_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as i64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize];
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, std::cmp::max(t, x) as u64)
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t;
+    Ok(())
+}
+
+/// [amominu.d rd,rs2,(rs1)]
+fn amominu_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as u64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize] as u64;
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, std::cmp::min(t, x))
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t as i64;
+    Ok(())
+}
+
+/// [amomaxu.d rd,rs2,(rs1)]
+fn amomaxu_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = match cpu.mmu.read64(cpu.x[o.rs1 as usize] as u64) {
+        Ok(data) => data as u64,
+        Err(e) => return Err(e),
+    };
+    let x = cpu.x[o.rs2 as usize] as u64;
+    match cpu
+        .mmu
+        .write64(cpu.x[o.rs1 as usize] as u64, std::cmp::max(t, x))
+    {
+        Ok(()) => {}
+        Err(e) => return Err(e),
+    };
+    cpu.x[o.rd as usize] = t as i64;
     Ok(())
 }
