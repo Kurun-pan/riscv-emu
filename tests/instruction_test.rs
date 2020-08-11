@@ -163,11 +163,9 @@ fn rv32ui_p_xori() { assert_eq!(1, instruction_test("rv32ui-p-xori")); }
 //***********************************************************************
 /*
 #[test]
-fn v_add() { assert_eq!(1, instruction_test("rv32ui-v-add")); }
-
-#[test]
-fn v_addi() { assert_eq!(1, instruction_test("rv32ui-v-addi")); }
+fn rv32ui_v_add() { assert_eq!(1, instruction_test("rv32ui-v-add")); }
 */
+
 
 //***********************************************************************
 // rv64ui (RV64 user-level, integer only), virtual memory is disable
@@ -324,3 +322,30 @@ fn rv64ui_p_xor() { assert_eq!(1, instruction_test("rv64ui-p-xor")); }
 
 #[test]
 fn rv64ui_p_xori() { assert_eq!(1, instruction_test("rv64ui-p-xori")); }
+
+//***********************************************************************
+// rv32um (RV32 user-level, Multiplication only), virtual memory is enabled
+//***********************************************************************
+#[test]
+fn rv32um_p_div() { assert_eq!(1, instruction_test("rv32um-p-div")); }
+
+#[test]
+fn rv32um_p_divu() { assert_eq!(1, instruction_test("rv32um-p-divu")); }
+
+#[test]
+fn rv32um_p_mul() { assert_eq!(1, instruction_test("rv32um-p-mul")); }
+
+#[test]
+fn rv32um_p_mulh() { assert_eq!(1, instruction_test("rv32um-p-mulh")); }
+
+#[test]
+fn rv32um_p_mulhsu() { assert_eq!(1, instruction_test("rv32um-p-mulhsu")); }
+
+#[test]
+fn rv32um_p_mulhu() { assert_eq!(1, instruction_test("rv32um-p-mulhu")); }
+
+#[test]
+fn rv32um_p_rem() { assert_eq!(1, instruction_test("rv32um-p-rem")); }
+
+#[test]
+fn rv32um_p_remu() { assert_eq!(1, instruction_test("rv32um-p-remu")); }

@@ -335,6 +335,11 @@ lazy_static! {
             operation: add,
             disassemble: disassemble_r,
         });
+        m.insert((1, 0), Instruction{
+            mnemonic: "mul",
+            operation: mul,
+            disassemble: disassemble_r,
+        });
         m.insert((32, 0), Instruction{
             mnemonic: "sub",
             operation: sub,
@@ -345,9 +350,19 @@ lazy_static! {
             operation: sll,
             disassemble: disassemble_r,
         });
+        m.insert((1, 1), Instruction{
+            mnemonic: "mulh",
+            operation: mulh,
+            disassemble: disassemble_r,
+        });
         m.insert((0, 2), Instruction{
             mnemonic: "slt",
             operation: slt,
+            disassemble: disassemble_r,
+        });
+        m.insert((1, 2), Instruction{
+            mnemonic: "mulhsu",
+            operation: mulhsu,
             disassemble: disassemble_r,
         });
         m.insert((0, 3), Instruction{
@@ -355,14 +370,29 @@ lazy_static! {
             operation: sltu,
             disassemble: disassemble_r,
         });
+        m.insert((1, 3), Instruction{
+            mnemonic: "mulhu",
+            operation: mulhu,
+            disassemble: disassemble_r,
+        });
         m.insert((0, 4), Instruction{
             mnemonic: "xor",
             operation: xor,
             disassemble: disassemble_r,
         });
+        m.insert((1, 4), Instruction{
+            mnemonic: "div",
+            operation: div,
+            disassemble: disassemble_r,
+        });
         m.insert((0, 5), Instruction{
             mnemonic: "srl",
             operation: srl,
+            disassemble: disassemble_r,
+        });
+        m.insert((1, 5), Instruction{
+            mnemonic: "divu",
+            operation: divu,
             disassemble: disassemble_r,
         });
         m.insert((32, 5), Instruction{
@@ -375,9 +405,19 @@ lazy_static! {
             operation: or,
             disassemble: disassemble_r,
         });
+        m.insert((1, 6), Instruction{
+            mnemonic: "rem",
+            operation: rem,
+            disassemble: disassemble_r,
+        });
         m.insert((0, 7), Instruction{
             mnemonic: "and",
             operation: and,
+            disassemble: disassemble_r,
+        });
+        m.insert((1, 7), Instruction{
+            mnemonic: "remu",
+            operation: remu,
             disassemble: disassemble_r,
         });
         m
@@ -1707,4 +1747,126 @@ fn disassemble_mnemonic(_cpu: &Cpu, mnemonic: &str, _word: u32) -> String {
     let mut s = String::new();
     s += &format!("{}", mnemonic);
     s
+}
+
+//==============================================================================
+// Multiplication Instructions (RV32M/RV64M)
+//==============================================================================
+/// [mul rd,rs1,rs2]
+/// MUL performs an XLEN-bit×XLEN-bit multiplication of rs1 by rs2 and places
+/// the lower XLEN bits in the destination register.
+fn mul(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        cpu.x[o.rs1 as usize].wrapping_mul(cpu.x[o.rs2 as usize]),
+    );
+    Ok(())
+}
+
+/// [mulh rd,rs1,rs2]
+fn mulh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let t = cpu.x[o.rs1 as usize].wrapping_mul(cpu.x[o.rs2 as usize]);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        match cpu.xlen {
+            Xlen::X64 => t,
+            _ => signed(cpu, t >> 32),
+        },
+    );
+    Ok(())
+}
+
+/// [mulhsu rd,rs1,rs2]
+fn mulhsu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        match cpu.xlen {
+            Xlen::X64 => {
+                ((cpu.x[o.rs1 as usize] as i128 * (cpu.x[o.rs2 as usize] as u64 as i128)) >> 64)
+                    as i64
+            }
+            _ => {
+                (((cpu.x[o.rs1 as usize] as i32 as i64) * (cpu.x[o.rs2 as usize] as u32 as i64))
+                    >> 32) as i64
+            }
+        },
+    );
+    Ok(())
+}
+
+/// [mulhu rd,rs1,rs2]
+fn mulhu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        match cpu.xlen {
+            Xlen::X64 => {
+                ((cpu.x[o.rs1 as usize] as u128).wrapping_mul(cpu.x[o.rs2 as usize] as u128) >> 64)
+                    as i64
+            }
+            _ => {
+                ((cpu.x[o.rs1 as usize] as u32 as u64)
+                    .wrapping_mul(cpu.x[o.rs2 as usize] as u32 as u64)
+                    >> 32) as i64
+            }
+        },
+    );
+    Ok(())
+}
+
+/// [div rd,rs1,rs2]
+/// DIV and DIVU perform an XLEN bits by XLEN bits signed and unsigned integer
+/// division of rs1 by rs2, rounding towards zero.
+fn div(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = match cpu.x[o.rs2 as usize] {
+        0 => -1,
+        _ => signed(
+            cpu,
+            cpu.x[o.rs1 as usize].wrapping_div(cpu.x[o.rs2 as usize]),
+        ),
+    };
+    Ok(())
+}
+
+/// [divu rd,rs1,rs2]
+fn divu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let numerator = unsigned(cpu, cpu.x[o.rs1 as usize]);
+    let denominator = unsigned(cpu, cpu.x[o.rs2 as usize]);
+    cpu.x[o.rd as usize] = match denominator {
+        0 => -1,
+        _ => signed(cpu, numerator.wrapping_div(denominator) as i64),
+    };
+    Ok(())
+}
+
+/// [rem rd,rs1,rs2]
+/// REM and REMU provide the remainder of the corresponding division operation.
+/// For REM, the sign of the result equals the sign of the dividend.
+fn rem(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.x[o.rd as usize] = match cpu.x[o.rs2 as usize] {
+        0 => cpu.x[o.rs1 as usize],
+        _ => signed(cpu, cpu.x[o.rs1 as usize] % cpu.x[o.rs2 as usize]),
+    };
+    Ok(())
+}
+
+/// [remu rd,rs1,rs2]
+fn remu(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    let numerator = unsigned(cpu, cpu.x[o.rs1 as usize]);
+    let denominator = unsigned(cpu, cpu.x[o.rs2 as usize]);
+    cpu.x[o.rd as usize] = signed(
+        cpu,
+        match denominator {
+            0 => numerator,
+            _ => numerator % denominator,
+        } as i64,
+    );
+    Ok(())
 }

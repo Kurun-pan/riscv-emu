@@ -9,7 +9,7 @@
 ### 32-bit
 
 - [x] RV32I
-- [ ] RV32M
+- [x] RV32M
 - [ ] RV32F
 - [ ] RV32D
 - [ ] RV32V
@@ -19,7 +19,7 @@
 ### 64-bit
 
 - [x] RV64I
-- [ ] RV64M
+- [x] RV64M
 - [ ] RV64F
 - [ ] RV64D
 - [ ] RV64V
