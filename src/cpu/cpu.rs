@@ -1,12 +1,13 @@
 use crate::cpu::cpu_csr::*;
 use crate::cpu::cpu_instruction::{Opecode, OPECODES, unsigned};
+use crate::cpu::cpu_instruction_comp::*;
 use crate::cpu::trap::*;
 use crate::mmu::Mmu;
 
 #[derive(Clone)]
 pub enum Xlen {
-    X32,
-    X64,
+    X32 = 0,
+    X64 = 1,
 }
 
 #[derive(Clone)]
@@ -118,19 +119,23 @@ impl Cpu {
         match (fetch_word & 0x3) == 0x3 {
             // 32bit instruction
             true => {
+                print!("   ");
                 self.pc = self.pc.wrapping_add(4);
                 return Ok(fetch_word);
             }
             // 16bit compressed instruction
             false => {
+                print!("(C)");
                 self.pc = self.pc.wrapping_add(2);
-                return self.instruction_uncompress((fetch_word & 0xffff) as u16);
+                return match instruction_decompress(self, self.pc.wrapping_sub(2), fetch_word) {
+                    Ok(word) => Ok(word),
+                    Err(()) => Err(Trap {
+                        exception: Exception::IllegalInstruction,
+                        value: self.pc.wrapping_sub(2)
+                    }),
+                }
             }
         };
-    }
-
-    fn instruction_uncompress(&mut self, word: u16) -> Result<u32, Trap> {
-        panic!("Compressed instruction is not implimented now!");
     }
 
     fn decode(&mut self, word: u32) -> Result<&Opecode, Trap> {

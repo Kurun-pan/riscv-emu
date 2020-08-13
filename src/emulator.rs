@@ -85,22 +85,24 @@ impl Emulator {
 
         self.tohost = match loader.search_tohost(&progbits_sec_headers, &strtab_sec_headers) {
             Some(addr) => addr,
-            None => panic!("Not found .tohost section!!")
+            None => 0
         };
-        println!(".tohost = {:x}", self.tohost);
+        //println!(".tohost = {:x}", self.tohost);
     }
 
     pub fn run(&mut self) -> Result<u32, u32> {
         println!("Start RISC-V Emulator!");
         loop {
             self.cpu.tick();
-            match self.cpu.mmu.read32_direct(self.tohost) {
-                Ok(data) => match data {
-                    0 => {},
-                    1 => return Ok(1),
-                    n => return Err(n)
-                },
-                Err(e) => panic!("Faild to read .tohost: {:?}", e.exception)
+            if self.tohost != 0 {
+                match self.cpu.mmu.read32_direct(self.tohost) {
+                    Ok(data) => match data {
+                        0 => {},
+                        1 => return Ok(1),
+                        n => return Err(n)
+                    },
+                    Err(e) => panic!("Faild to read .tohost: {:?}", e.exception)
+                }
             }
         }
     }

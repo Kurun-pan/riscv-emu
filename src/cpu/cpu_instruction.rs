@@ -115,7 +115,7 @@ lazy_static! {
     };
 
     // RV32I/RV64I Load Instructions.
-    pub static ref INSTRUCTIONS_GROUP03: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP03: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0, Instruction{
             mnemonic: "lb",
@@ -156,7 +156,7 @@ lazy_static! {
     };
 
     // RV32F/RV64F Single/Double-Precision Load Instructions.
-    pub static ref INSTRUCTIONS_GROUP07: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP07: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0, Instruction{
             mnemonic: "flw",
@@ -177,7 +177,7 @@ lazy_static! {
         */
         m
     };
-    pub static ref INSTRUCTIONS_GROUP27: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP27: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(2, Instruction{
             mnemonic: "fsw",
@@ -193,7 +193,7 @@ lazy_static! {
     };
 
     // Memory Ordering Instructions.
-    pub static ref INSTRUCTIONS_GROUP0F: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP0F: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0, Instruction{
             mnemonic: "fence",
@@ -209,7 +209,7 @@ lazy_static! {
     };
 
     // RV32I/RV64I Integer Register-Immediate Instructions.
-    pub static ref INSTRUCTIONS_GROUP13: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP13: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0, Instruction{
             mnemonic: "addi",
@@ -248,7 +248,7 @@ lazy_static! {
         });
         m
     };
-    pub static ref INSTRUCTIONS_GROUP13_SUB: HashMap<(u8, u8), Instruction> = {
+    static ref INSTRUCTIONS_GROUP13_SUB: HashMap<(u8, u8), Instruction> = {
         let mut m = HashMap::new();
         m.insert((0, 5), Instruction{
             mnemonic: "srli",
@@ -274,7 +274,7 @@ lazy_static! {
     };
 
     // RV64I Integer Register-Immediate Instructions.
-    pub static ref INSTRUCTIONS_GROUP1B: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP1B: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0, Instruction{
             mnemonic: "addiw",
@@ -289,7 +289,7 @@ lazy_static! {
         m
     };
 
-    pub static ref INSTRUCTIONS_GROUP1B_SUB: HashMap<(u8, u8), Instruction> = {
+    static ref INSTRUCTIONS_GROUP1B_SUB: HashMap<(u8, u8), Instruction> = {
         let mut m = HashMap::new();
         m.insert((0, 5), Instruction{
             mnemonic: "srliw",
@@ -303,8 +303,9 @@ lazy_static! {
         });
         m
     };
+
     // RV32I/RV64I Store Instructions.
-    pub static ref INSTRUCTIONS_GROUP23: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP23: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0, Instruction{
             mnemonic: "sb",
@@ -329,7 +330,7 @@ lazy_static! {
         m
     };
 
-    pub static ref INSTRUCTIONS_GROUP2F: HashMap<(u8, u8), Instruction> = {
+    static ref INSTRUCTIONS_GROUP2F: HashMap<(u8, u8), Instruction> = {
         let mut m = HashMap::new();
         m.insert((2, 2), Instruction{
             mnemonic: "lr.w",
@@ -444,7 +445,7 @@ lazy_static! {
         m
     };
 
-    pub static ref INSTRUCTIONS_GROUP33: HashMap<(u8, u8), Instruction> = {
+    static ref INSTRUCTIONS_GROUP33: HashMap<(u8, u8), Instruction> = {
         let mut m = HashMap::new();
         m.insert((0, 0), Instruction{
             mnemonic: "add",
@@ -539,7 +540,7 @@ lazy_static! {
         m
     };
 
-    pub static ref INSTRUCTIONS_GROUP3B: HashMap<(u8, u8), Instruction> = {
+    static ref INSTRUCTIONS_GROUP3B: HashMap<(u8, u8), Instruction> = {
         let mut m = HashMap::new();
         m.insert((0, 0), Instruction{
             mnemonic: "addw",
@@ -595,7 +596,7 @@ lazy_static! {
     };
 
     // Conditional Branches.
-    pub static ref INSTRUCTIONS_GROUP63: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP63: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0, Instruction{
             mnemonic: "beq",
@@ -631,7 +632,7 @@ lazy_static! {
     };
 
     // Control and Status Register (CSR) Instructions.
-    pub static ref INSTRUCTIONS_GROUP73: HashMap<u8, Instruction> = {
+    static ref INSTRUCTIONS_GROUP73: HashMap<u8, Instruction> = {
         let mut m = HashMap::new();
         m.insert(1, Instruction{
             mnemonic: "csrrw",
@@ -665,7 +666,7 @@ lazy_static! {
         });
         m
     };
-    pub static ref INSTRUCTIONS_GROUP73_EXTEND: HashMap<u16, Instruction> = {
+    static ref INSTRUCTIONS_GROUP73_EXTEND: HashMap<u16, Instruction> = {
         let mut m = HashMap::new();
         m.insert(0x000, Instruction{
             mnemonic: "ecall",

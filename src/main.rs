@@ -18,7 +18,8 @@ fn main() {
     */
 
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    root.push("tests/bin/rv32ui-v-add");
+    //root.push("tests/bin/rv32ui-v-add");
+    root.push("artifacts/xv6/kernel");
 
     // run test program.
     emu.load_program(root.as_path());
@@ -26,5 +27,5 @@ fn main() {
         Ok(ret) => ret,
         Err(ret) => ret,
     };
-    println!("instruction test result is {}", result);
+    //println!("instruction test result is {}", result);
 }
