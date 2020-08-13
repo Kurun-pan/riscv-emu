@@ -13,122 +13,123 @@ pub struct CompressedInstruction {
 }
 
 lazy_static! {
-    static ref COMPRESSED_OPECODES: HashMap<u8, CompressedOpecode> = {
-        let mut m = HashMap::new();
-        m.insert(0x0, CompressedOpecode {operation: opecode_0});
-        m.insert(0x1, CompressedOpecode {operation: opecode_1});
-        m.insert(0x2, CompressedOpecode {operation: opecode_2});
-        m
-    };
+static ref COMPRESSED_OPECODES: HashMap<u8, CompressedOpecode> = {
+    let mut m = HashMap::new();
+    m.insert(0x0, CompressedOpecode {operation: opecode_0});
+    m.insert(0x1, CompressedOpecode {operation: opecode_1});
+    m.insert(0x2, CompressedOpecode {operation: opecode_2});
+    m
+};
 
-    static ref COMPRESSED_INSTRUCTIONS_GROUP0: HashMap<u8, CompressedInstruction> = {
-        let mut m = HashMap::new();
-        m.insert(0, CompressedInstruction {
-            mnemonic: "c.addi4spn",
-            decompress: c_addi4spn,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(1, CompressedInstruction {
-            mnemonic: "c.fld",
-            decompress: c_fld,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(2, CompressedInstruction {
-            mnemonic: "c.lw",
-            decompress: c_lw,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(5, CompressedInstruction {
-            mnemonic: "c.fsd",
-            decompress: c_fsd,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(6, CompressedInstruction {
-            mnemonic: "c.sw",
-            decompress: c_sw,
-            disassemble: disassemble_mnemonic,
-        });
-        m
-    };
-    static ref COMPRESSED_INSTRUCTIONS_GROUP0_SUB: HashMap<(u8, u8), CompressedInstruction> = {
-        let mut m = HashMap::new();
-        m.insert((0, 3), CompressedInstruction { // FV32FC only.
-            mnemonic: "c.flw",
-            decompress: c_flw,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert((1, 3), CompressedInstruction { // FC64IC only.
-            mnemonic: "c.ld",
-            decompress: c_ld,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert((0, 7), CompressedInstruction { // FV32FC only.
-            mnemonic: "c.fsw",
-            decompress: c_fsw,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert((1, 7), CompressedInstruction { // FC64IC only.
-            mnemonic: "c.sd",
-            decompress: c_sd,
-            disassemble: disassemble_mnemonic,
-        });
-        m
-    };
+static ref COMPRESSED_INSTRUCTIONS_GROUP0: HashMap<u8, CompressedInstruction> = {
+    let mut m = HashMap::new();
+    m.insert(0, CompressedInstruction {
+        mnemonic: "c.addi4spn",
+        decompress: c_addi4spn,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(1, CompressedInstruction {
+        mnemonic: "c.fld",
+        decompress: c_fld,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(2, CompressedInstruction {
+        mnemonic: "c.lw",
+        decompress: c_lw,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(5, CompressedInstruction {
+        mnemonic: "c.fsd",
+        decompress: c_fsd,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(6, CompressedInstruction {
+        mnemonic: "c.sw",
+        decompress: c_sw,
+        disassemble: disassemble_mnemonic,
+    });
+    m
+};
+static ref COMPRESSED_INSTRUCTIONS_GROUP0_SUB: HashMap<(u8, u8), CompressedInstruction> = {
+    let mut m = HashMap::new();
+    m.insert((0, 3), CompressedInstruction { // FV32FC only.
+        mnemonic: "c.flw",
+        decompress: c_flw,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert((1, 3), CompressedInstruction { // FC64IC only.
+        mnemonic: "c.ld",
+        decompress: c_ld,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert((0, 7), CompressedInstruction { // FV32FC only.
+        mnemonic: "c.fsw",
+        decompress: c_fsw,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert((1, 7), CompressedInstruction { // FC64IC only.
+        mnemonic: "c.sd",
+        decompress: c_sd,
+        disassemble: disassemble_mnemonic,
+    });
+    m
+};
 
-    static ref COMPRESSED_INSTRUCTIONS_GROUP1: HashMap<u8, CompressedInstruction> = {
-        let mut m = HashMap::new();
-        m.insert(2, CompressedInstruction {
-            mnemonic: "c.li",
-            decompress: c_li,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(5, CompressedInstruction {
-            mnemonic: "c.j",
-            decompress: c_j,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(6, CompressedInstruction {
-            mnemonic: "c.beqz",
-            decompress: c_beqz,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(7, CompressedInstruction {
-            mnemonic: "c.bnez",
-            decompress: c_bnez,
-            disassemble: disassemble_mnemonic,
-        });
-        m
-    };
+static ref COMPRESSED_INSTRUCTIONS_GROUP1: HashMap<u8, CompressedInstruction> = {
+    let mut m = HashMap::new();
+    m.insert(2, CompressedInstruction {
+        mnemonic: "c.li",
+        decompress: c_li,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(5, CompressedInstruction {
+        mnemonic: "c.j",
+        decompress: c_j,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(6, CompressedInstruction {
+        mnemonic: "c.beqz",
+        decompress: c_beqz,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(7, CompressedInstruction {
+        mnemonic: "c.bnez",
+        decompress: c_bnez,
+        disassemble: disassemble_mnemonic,
+    });
+    m
+};
 
-    static ref COMPRESSED_INSTRUCTIONS_GROUP2: HashMap<u8, CompressedInstruction> = {
-        let mut m = HashMap::new();
-        m.insert(0, CompressedInstruction {
-            mnemonic: "c.slli",
-            decompress: c_slli,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(1, CompressedInstruction {
-            mnemonic: "c.fldsp",
-            decompress: c_fldsp,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(2, CompressedInstruction {
-            mnemonic: "c.lwsp",
-            decompress: c_lwsp,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(5, CompressedInstruction {
-            mnemonic: "c.fsdsp",
-            decompress: c_fsdsp,
-            disassemble: disassemble_mnemonic,
-        });
-        m.insert(6, CompressedInstruction {
-            mnemonic: "c.swsp",
-            decompress: c_swsp,
-            disassemble: disassemble_mnemonic,
-        });
-        m
-    };}
+static ref COMPRESSED_INSTRUCTIONS_GROUP2: HashMap<u8, CompressedInstruction> = {
+    let mut m = HashMap::new();
+    m.insert(0, CompressedInstruction {
+        mnemonic: "c.slli",
+        decompress: c_slli,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(1, CompressedInstruction {
+        mnemonic: "c.fldsp",
+        decompress: c_fldsp,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(2, CompressedInstruction {
+        mnemonic: "c.lwsp",
+        decompress: c_lwsp,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(5, CompressedInstruction {
+        mnemonic: "c.fsdsp",
+        decompress: c_fsdsp,
+        disassemble: disassemble_mnemonic,
+    });
+    m.insert(6, CompressedInstruction {
+        mnemonic: "c.swsp",
+        decompress: c_swsp,
+        disassemble: disassemble_mnemonic,
+    });
+    m
+};}
+
 fn opecode_0(cpu: &Cpu, word: u16) -> Result<&'static CompressedInstruction, ()> {
     let funct3 = ((word >> 13) & 0x7) as u8;
     match funct3 {
@@ -170,8 +171,8 @@ fn opecode_1(cpu: &Cpu, word: u16) -> Result<&'static CompressedInstruction, ()>
                 disassemble: disassemble_mnemonic,
             }),
         },
-        3 => match word & 0xf00 {
-            1 => Ok(&CompressedInstruction {
+        3 => match (word >> 7) & 0x1f {
+            2 => Ok(&CompressedInstruction {
                 mnemonic: "c.addi16sp",
                 decompress: c_addi16sp,
                 disassemble: disassemble_mnemonic,
@@ -246,12 +247,14 @@ fn opecode_2(cpu: &Cpu, word: u16) -> Result<&'static CompressedInstruction, ()>
     let funct3 = ((word >> 13) & 0x7) as u8;
     match funct3 {
         3 => match cpu.xlen {
-            Xlen::X32 => Ok(&CompressedInstruction { // RV32FC only.
+            Xlen::X32 => Ok(&CompressedInstruction {
+                // RV32FC only.
                 mnemonic: "c.flwsp",
                 decompress: c_flwsp,
                 disassemble: disassemble_mnemonic,
             }),
-            _ => Ok(&CompressedInstruction { // RV64IC only.
+            _ => Ok(&CompressedInstruction {
+                // RV64IC only.
                 mnemonic: "c.ldsp",
                 decompress: c_ldsp,
                 disassemble: disassemble_mnemonic,
@@ -291,12 +294,14 @@ fn opecode_2(cpu: &Cpu, word: u16) -> Result<&'static CompressedInstruction, ()>
             },
         },
         7 => match cpu.xlen {
-            Xlen::X32 => Ok(&CompressedInstruction { // RV32FC only.
+            Xlen::X32 => Ok(&CompressedInstruction {
+                // RV32FC only.
                 mnemonic: "c.fswsp",
                 decompress: c_fswsp,
                 disassemble: disassemble_mnemonic,
             }),
-            _ => Ok(&CompressedInstruction { // RV64IC only.
+            _ => Ok(&CompressedInstruction {
+                // RV64IC only.
                 mnemonic: "c.sdsp",
                 decompress: c_sdsp,
                 disassemble: disassemble_mnemonic,
@@ -332,15 +337,15 @@ fn disassemble_mnemonic(_cpu: &Cpu, mnemonic: &str, _word: u16) -> String {
 /// [c.addi4spn rd’,uimm]
 fn c_addi4spn(cpu: &Cpu, word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 2) & 0x7) as u32;
-    let uimm =
+    let uimm_ =
         (((word >> 7) & 0x30) | ((word >> 1) & 0x3c0) | ((word >> 4) & 0x4) | ((word >> 2) & 0x8))
             as u32;
-    match uimm {
+    match uimm_ {
         0 => Err(()),
         _ => {
-            // addi rd, x2, uimm
+            // addi rd,rs1,imm
             let op = 0x13 as u32;
-            let imm = uimm << 20;
+            let imm = uimm_ << 20;
             let rs1 = (2 << 15) as u32;
             let rd = (rd_ + 8) << 7;
             Ok(imm | rs1 | rd | op)
@@ -356,8 +361,16 @@ fn c_fld(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 
 /// [c.lw rd’,uimm(rs1’)]
 fn c_lw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 2) & 0x7) as u32;
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word >> 4) & 0x4) | ((word << 1) & 0x40)) as u32;
+
+    // lw rd,offset(rs1)
+    let op = 0x3 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rs1_ + 8) << 15;
+    let offset = uimm << 20;
+    Ok(offset | rs1 | 2 << 12 | rd | op)
 }
 
 /// [c.flw rd’,uimm(rs1’)]
@@ -368,8 +381,16 @@ fn c_flw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 
 /// [c.ld rd’,uimm(rs1’)]
 fn c_ld(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 2) & 0x7) as u32;
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+
+    // ld rd,offset(rs1)
+    let op = 0x3 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rs1_ + 8) << 15;
+    let offset = uimm << 20;
+    Ok(offset | rs1 | 3 << 12 | rd | op)
 }
 
 /// [c.fsd rd’,uimm(rs1’)]
@@ -380,8 +401,17 @@ fn c_fsd(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 
 /// [c.sw rd’,uimm(rs1’)]
 fn c_sw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word >> 4) & 0x4) | ((word << 1) & 0x40)) as u32;
+
+    // sw rs2,offset(rs1)
+    let op = 0x23 as u32;
+    let rs2 = (rs2_ + 8) << 20;
+    let rs1 = (rs1_ + 8) << 15;
+    let offset_h = ((uimm >> 5) & 0x7f) << 25;
+    let offset_l = (uimm & 0x1f) << 7;
+    Ok(offset_h | rs2 | rs1 | 2 << 12 | offset_l | op)
 }
 
 /// [c.fsw rd’,uimm(rs1’)]
@@ -392,8 +422,17 @@ fn c_fsw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 
 /// [c.sd rd’,uimm(rs1’)]
 fn c_sd(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+
+    // sd rs2,offset(rs1)
+    let op = 0x23 as u32;
+    let rs2 = (rs2_ + 8) << 20;
+    let rs1 = (rs1_ + 8) << 15;
+    let offset_l = (uimm & 0x1f) << 7;
+    let offset_h = ((uimm >> 5) & 0x7f) << 20;
+    Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
 }
 
 /// [c.nop]
@@ -405,14 +444,15 @@ fn c_nop(cpu: &Cpu, _word: u16) -> Result<u32, ()> {
 /// [c.addi rd,u[12:12]|u[6:2]]
 fn c_addi(cpu: &Cpu, word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x1f) as u32;
-    let mut imm = ((word & 0x1000) >> 7 | (word & 0xfc >> 2)) as u32;
+    let imm_ = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
 
     // addi rd,rs1,imm
     let op = 0x13 as u32;
-    imm = match word & 0x1000 {
+    let imm = (match word & 0x1000 {
         0 => 0,
-        _ => 0xfffc0000
-    } | imm;
+        _ => 0xffffffc0,
+    } | imm_)
+        << 20;
     let rd = rd_ << 7;
     let rs1 = rd_ << 15;
     Ok(imm | rs1 | rd | op)
@@ -426,35 +466,80 @@ fn c_jal(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 
 /// [c.addiw rd,imm]
 fn c_addiw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x1f) as u32;
+    match rd_ {
+        0 => Err(()),
+        _ => {
+            let imm_ = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
+
+            // addiw rd,rs1,imm
+            let op = 0x1b as u32;
+            let imm = (match word & 0x1000 {
+                0 => 0,
+                _ => 0xffffffc0,
+            } | imm_)
+                << 20;
+            let rd = rd_ << 7;
+            let rs1 = rd_ << 15;
+            Ok(imm | rs1 | rd | op)
+        }
+    }
 }
 
 /// [c.li rd,uimm]
 fn c_li(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x1f) as u32;
+    let uimm = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
+
+    // addi rd,rs1,imm
+    let op = 0x13 as u32;
+    let imm = (match word & 0x1000 {
+        0 => 0,
+        _ => 0xffffffc0,
+    } | uimm)
+        << 20;
+    let rd = rd_ << 7;
+    Ok(imm | rd | op)
 }
 
 /// [c.addi16sp imm]
 fn c_addi16sp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = 2;
+    let imm_ = (((word >> 3) & 0x200)
+        | ((word >> 2) & 0x10)
+        | ((word << 1) & 0x40)
+        | ((word << 4) & 0x180)
+        | ((word << 3) & 0x20)) as u32;
+    match imm_ {
+        0 => Err(()),
+        _ => {
+            // addi rd,rs1,imm
+            let op = 0x13 as u32;
+            let imm = (match word & 0x1000 {
+                0 => 0,
+                _ => 0xfffffc00,
+            } | imm_)
+                << 20;
+            let rs1 = rd_ << 15;
+            let rd = rd_ << 7;
+            Ok(imm | rs1 | rd | op)
+        }
+    }
 }
 
 /// [c.lui rd,uimm]
 fn c_lui(cpu: &Cpu, word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x1f) as u32;
-    let mut imm = ((word & 0x1000) << 5 | (word & 0xfc << 10)) as u32;
-    match imm {
+    let imm_ = ((((word as u32) << 5) & 0x20000) | (((word as u32) << 10) & 0x1f000)) as u32;
+    match imm_ {
         0 => Err(()),
         _ => {
             // lui rd,imm
             let op = 0x37 as u32;
-            imm = match word & 0x1000 {
+            let imm = match word & 0x1000 {
                 0 => 0,
-                _ => 0xfffc0000
-            } | imm;
+                _ => 0xfffc0000,
+            } | imm_;
             let rd = rd_ << 7;
             Ok(imm | rd | op)
         }
@@ -463,56 +548,123 @@ fn c_lui(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 
 /// [c.srli rd’,uimm]
 fn c_srli(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
+
+    // srli rd,rs1,shamt
+    let op = 0x13 as u32;
+    let shamt = uimm << 20;
+    let rs1 = (rd_ + 8) << 15;
+    let rd = (rd_ + 8) << 7;
+    Ok(shamt | rs1 | 5 << 12 | rd | op)
 }
 
 /// [c.srai rd’,uimm]
 fn c_srai(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
+
+    // srai rd,rs1,shamt
+    let op = 0x13 as u32;
+    let shamt = uimm << 20;
+    let rs1 = (rd_ + 8) << 15;
+    let rd = (rd_ + 8) << 7;
+    Ok(0x20 << 25 | shamt | rs1 | 5 << 12 | rd | op)
 }
 
 /// [c.andi rd’,uimm]
 fn c_andi(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let imm_ = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
+
+    // andi rd,rs1,imm
+    let op = 0x13 as u32;
+    let imm = (match word & 0x1000 {
+        0 => 0,
+        _ => 0xffffffc0,
+    } | imm_)
+        << 20;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rd_ + 8) << 15;
+    Ok(imm | rs1 | 7 << 12 | rd | op)
 }
 
 /// [c.sub rd’,rd’]
 fn c_sub(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+
+    // sub rd,rs1,rs2
+    let op = 0x33 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rd_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
+    Ok(0x20 << 25 | rs2 | rs1 | rd | op)
 }
 
 /// [c.xor rd’,rd’]
 fn c_xor(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+
+    // xor rd,rs1,rs2
+    let op = 0x33 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rd_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
+    Ok(rs2 | rs1 | 4 << 12 | rd | op)
 }
 
 /// [c.or rd’,rd’]
 fn c_or(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+
+    // or rd,rs1,rs2
+    let op = 0x33 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rd_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
+    Ok(rs2 | rs1 | 6 << 12 | rd | op)
 }
 
 /// [c.and rd’,rd’]
 fn c_and(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+
+    // xor rd,rs1,rs2
+    let op = 0x33 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rd_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
+    Ok(rs2 | rs1 | 7 << 12 | rd | op)
 }
 
 /// [c.subw rd’,rs2’]
 fn c_subw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+
+    // subw rd,rs1,rs2
+    let op = 0x3b as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rd_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
+    Ok(0x20 << 25 | rs2 | rs1 | rd | op)
 }
 
 /// [c.addw rd’,rs2’]
 fn c_addw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+    let rd_ = ((word >> 7) & 0x7) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+
+    // addw rd,rs1,rs2
+    let op = 0x3b as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rd_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
+    Ok(rs2 | rs1 | rd | op)
 }
 
 /// [c.j offset]
