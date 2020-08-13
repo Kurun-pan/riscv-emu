@@ -456,7 +456,27 @@ fn c_addi(word: u16) -> Result<u32, ()> {
 
 /// [c.jal offset]
 fn c_jal(word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+    let offset = match word & 0x1000 {
+        0 => 0,
+        _ => 0xfffff000,
+    } | (((word >> 1) & 0x800)
+        | ((word >> 7) & 0x10)
+        | ((word >> 1) & 0x300)
+        | ((word << 2) & 0x400)
+        | ((word >> 1) & 0x40)
+        | ((word << 1) & 0x80)
+        | ((word >> 2) & 0xe)
+        | ((word << 3) & 0x20)) as u32;
+
+    // jal rd,offset
+    let op = 0x6f as u32;
+    let rd = 1/* x1 */ << 7;
+    let imm = (((offset >> 1) & 0x80000)
+        | ((offset << 8) & 0x7fe00)
+        | ((offset >> 3) & 0x100)
+        | ((offset >> 12) & 0xff))
+        << 12;
+    Ok(imm | rd | op)
 }
 
 /// [c.addiw rd,imm]
@@ -678,12 +698,13 @@ fn c_j(word: u16) -> Result<u32, ()> {
 
     // jal rd,offset
     let op = 0x6f as u32;
+    let rd = 0/* x0 */ << 7;
     let imm = (((offset >> 1) & 0x80000)
         | ((offset << 8) & 0x7fe00)
         | ((offset >> 3) & 0x100)
         | ((offset >> 12) & 0xff))
         << 12;
-    Ok(imm /*| (0 << 7)*/ | op)
+    Ok(imm | rd | op)
 }
 
 /// [c.beqz rs1’,offset]
@@ -748,7 +769,22 @@ fn c_fldsp(word: u16) -> Result<u32, ()> {
 
 /// [c.lwsp rd,uimm(x2)]
 fn c_lwsp(word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+    let rd_ = ((word >> 7) & 0x1f) as u32;
+    match rd_ {
+        0 => Err(()),
+        _ => {
+            let uimm = (((word >> 7) & 0x20) |
+            ((word >> 2) & 0x1c) |
+            ((word << 4) & 0xc0)) as u32;
+        
+            // lw rd,offset(rs1)
+            let op = 0x3 as u32;
+            let rd = rd_ << 7;
+            let rs1 = 2/* x2 */ << 15;
+            let offset = uimm << 20;
+            Ok(offset | rs1 | 2 << 12 | rd | op)
+        }
+    }
 }
 
 /// [c.flwsp rd,uimm(x2)]
@@ -758,7 +794,22 @@ fn c_flwsp(word: u16) -> Result<u32, ()> {
 
 /// [c.ldsp rd,uimm(x2)]
 fn c_ldsp(word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+    let rd_ = ((word >> 7) & 0x1f) as u32;
+    match rd_ {
+        0 => Err(()),
+        _ => {
+            let uimm = (((word >> 7) & 0x20) |
+            ((word >> 2) & 0x18) |
+            ((word << 4) & 0x1c0)) as u32;
+        
+            // ld rd,offset(rs1)
+            let op = 0x3 as u32;
+            let rd = rd_ << 7;
+            let rs1 = 2/* x2 */ << 15;
+            let offset = uimm << 20;
+            Ok(offset | rs1 | 3 << 12 | rd | op)
+        }
+    }
 }
 
 /// [c.jr rs1]
@@ -779,7 +830,20 @@ fn c_jr(word: u16) -> Result<u32, ()> {
 
 /// [c.mv rd,rs2’]
 fn c_mv(word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+    let rd_ = ((word >> 7) & 0x1f) as u32;
+    let rs2_ = ((word >> 2) & 0x1f) as u32;
+
+    match rs2_ == 0 {
+        true => Err(()),
+        _ => {
+            // add rd,rs1,rs2
+            let op = 0x33 as u32;
+            let rd = rd_ << 7;
+            let rs1 = 0/* x0 */ << 15;
+            let rs2 = rs2_ << 20;
+            Ok(rs2 | rs1 | rd | op)
+        }
+    }
 }
 
 /// [c.ebreak]
@@ -828,7 +892,16 @@ fn c_fsdsp(word: u16) -> Result<u32, ()> {
 
 /// [c.swsp rs2,uimm(x2)]
 fn c_swsp(word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+    let rs2_ = ((word >> 2) & 0x1f) as u32;
+    let uimm = (((word >> 7) & 0x3c) | ((word >> 1) & 0xc0)) as u32;
+
+    // sw rs2,offset(rs1)
+    let op = 0x23 as u32;
+    let rs2 = rs2_ << 20;
+    let rs1 = 2/* x2 */ << 15;
+    let offset_h = ((uimm >> 5) & 0x7f) << 25;
+    let offset_l = (uimm & 0x1f) << 7;
+    Ok(offset_h | rs2 | rs1 | 2 << 12 | offset_l | op)
 }
 
 /// [c.fswsp rs2,uimm(rs2)]

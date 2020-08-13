@@ -83,8 +83,7 @@ impl Mmu {
                 _ => AddressingMode::Sv32
             },
         };
-
-         println!("update mode => {:?}", self.addressing_mode);
+        //println!("update mode => {:?}", self.addressing_mode);
     }
 
     pub fn set_address_reserve(&mut self, addr: u64, request_reserve: bool) {

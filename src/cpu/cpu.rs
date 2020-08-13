@@ -87,7 +87,13 @@ impl Cpu {
         };
 
         // instruction decode.
-        print!(" [PC]: {:016x} [P]: {:?} |    {:08x}    ", instruction_addr, self.privilege, word);
+        {
+            let mut s = String::new();
+            s += &format!(" [PC]: {:016x}", instruction_addr);
+            s += &format!(" [P]: {:?} |", self.privilege);
+            s += &format!("    {:08x}    ", word);
+            print!("{}", s);
+        }
         let instruction = match self.decode(word) {
             Ok(opecode) => match (opecode.operation)(self, instruction_addr, word) {
                 Ok(_instruction) => _instruction,
