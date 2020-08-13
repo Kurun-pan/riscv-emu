@@ -161,11 +161,122 @@ fn rv32ui_p_xori() { assert_eq!(1, instruction_test("rv32ui-p-xori")); }
 //***********************************************************************
 // rv32ui (RV32 user-level, integer only), virtual memory is enabled
 //***********************************************************************
-/*
 #[test]
 fn rv32ui_v_add() { assert_eq!(1, instruction_test("rv32ui-v-add")); }
-*/
 
+#[test]
+fn rv32ui_v_addi() { assert_eq!(1, instruction_test("rv32ui-v-addi")); }
+
+#[test]
+fn rv32ui_v_and() { assert_eq!(1, instruction_test("rv32ui-v-and")); }
+
+#[test]
+fn rv32ui_v_andi() { assert_eq!(1, instruction_test("rv32ui-v-andi")); }
+
+#[test]
+fn rv32ui_v_auipc() { assert_eq!(1, instruction_test("rv32ui-v-auipc")); }
+
+#[test]
+fn rv32ui_v_beq() { assert_eq!(1, instruction_test("rv32ui-v-beq")); }
+
+#[test]
+fn rv32ui_v_bge() { assert_eq!(1, instruction_test("rv32ui-v-bge")); }
+
+#[test]
+fn rv32ui_v_bgeu() { assert_eq!(1, instruction_test("rv32ui-v-bgeu")); }
+
+#[test]
+fn rv32ui_v_blt() { assert_eq!(1, instruction_test("rv32ui-v-blt")); }
+
+#[test]
+fn rv32ui_v_bltu() { assert_eq!(1, instruction_test("rv32ui-v-bltu")); }
+
+#[test]
+fn rv32ui_v_bne() { assert_eq!(1, instruction_test("rv32ui-v-bne")); }
+
+#[test]
+fn rv32ui_v_fence_i() { assert_eq!(1, instruction_test("rv32ui-v-fence_i")); }
+
+#[test]
+fn rv32ui_v_jal() { assert_eq!(1, instruction_test("rv32ui-v-jal")); }
+
+#[test]
+fn rv32ui_v_jalr() { assert_eq!(1, instruction_test("rv32ui-v-jalr")); }
+
+#[test]
+fn rv32ui_v_lb() { assert_eq!(1, instruction_test("rv32ui-v-lb")); }
+
+#[test]
+fn rv32ui_v_lbu() { assert_eq!(1, instruction_test("rv32ui-v-lbu")); }
+
+#[test]
+fn rv32ui_v_lh() { assert_eq!(1, instruction_test("rv32ui-v-lh")); }
+
+#[test]
+fn rv32ui_v_lhu() { assert_eq!(1, instruction_test("rv32ui-v-lhu")); }
+
+#[test]
+fn rv32ui_v_lui() { assert_eq!(1, instruction_test("rv32ui-v-lui")); }
+
+#[test]
+fn rv32ui_v_lw() { assert_eq!(1, instruction_test("rv32ui-v-lw")); }
+
+#[test]
+fn rv32ui_v_or() { assert_eq!(1, instruction_test("rv32ui-v-or")); }
+
+#[test]
+fn rv32ui_v_ori() { assert_eq!(1, instruction_test("rv32ui-v-ori")); }
+
+#[test]
+fn rv32ui_v_sb() { assert_eq!(1, instruction_test("rv32ui-v-sb")); }
+
+#[test]
+fn rv32ui_v_sh() { assert_eq!(1, instruction_test("rv32ui-v-sh")); }
+
+#[test]
+fn rv32ui_v_simple() { assert_eq!(1, instruction_test("rv32ui-v-simple")); }
+
+#[test]
+fn rv32ui_v_sll() { assert_eq!(1, instruction_test("rv32ui-v-sll")); }
+
+#[test]
+fn rv32ui_v_slli() { assert_eq!(1, instruction_test("rv32ui-v-slli")); }
+
+#[test]
+fn rv32ui_v_slt() { assert_eq!(1, instruction_test("rv32ui-v-slt")); }
+
+#[test]
+fn rv32ui_v_slti() { assert_eq!(1, instruction_test("rv32ui-v-slti")); }
+
+#[test]
+fn rv32ui_v_sltiu() { assert_eq!(1, instruction_test("rv32ui-v-sltiu")); }
+
+#[test]
+fn rv32ui_v_sltu() { assert_eq!(1, instruction_test("rv32ui-v-sltu")); }
+
+#[test]
+fn rv32ui_v_sra() { assert_eq!(1, instruction_test("rv32ui-v-sra")); }
+
+#[test]
+fn rv32ui_v_srai() { assert_eq!(1, instruction_test("rv32ui-v-srai")); }
+
+#[test]
+fn rv32ui_v_srl() { assert_eq!(1, instruction_test("rv32ui-v-srl")); }
+
+#[test]
+fn rv32ui_v_srli() { assert_eq!(1, instruction_test("rv32ui-v-srli")); }
+
+#[test]
+fn rv32ui_v_sub() { assert_eq!(1, instruction_test("rv32ui-v-sub")); }
+
+#[test]
+fn rv32ui_v_sw() { assert_eq!(1, instruction_test("rv32ui-v-sw")); }
+
+#[test]
+fn rv32ui_v_xor() { assert_eq!(1, instruction_test("rv32ui-v-xor")); }
+
+#[test]
+fn rv32ui_v_xori() { assert_eq!(1, instruction_test("rv32ui-v-xori")); }
 
 //***********************************************************************
 // rv64ui (RV64 user-level, integer only), virtual memory is disable
@@ -324,6 +435,162 @@ fn rv64ui_p_xor() { assert_eq!(1, instruction_test("rv64ui-p-xor")); }
 fn rv64ui_p_xori() { assert_eq!(1, instruction_test("rv64ui-p-xori")); }
 
 //***********************************************************************
+// rv64ui (RV64 user-level, integer only), virtual memory is enable
+//***********************************************************************
+#[test]
+fn rv64ui_v_add() { assert_eq!(1, instruction_test("rv64ui-v-add")); }
+
+#[test]
+fn rv64ui_v_addi() { assert_eq!(1, instruction_test("rv64ui-v-addi")); }
+
+#[test]
+fn rv64ui_v_addiw() { assert_eq!(1, instruction_test("rv64ui-v-addiw")); }
+
+#[test]
+fn rv64ui_v_addw() { assert_eq!(1, instruction_test("rv64ui-v-addw")); }
+
+#[test]
+fn rv64ui_v_and() { assert_eq!(1, instruction_test("rv64ui-v-and")); }
+
+#[test]
+fn rv64ui_v_andi() { assert_eq!(1, instruction_test("rv64ui-v-andi")); }
+
+#[test]
+fn rv64ui_v_auipc() { assert_eq!(1, instruction_test("rv64ui-v-auipc")); }
+
+#[test]
+fn rv64ui_v_beq() { assert_eq!(1, instruction_test("rv64ui-v-beq")); }
+
+#[test]
+fn rv64ui_v_bge() { assert_eq!(1, instruction_test("rv64ui-v-bge")); }
+
+#[test]
+fn rv64ui_v_bgeu() { assert_eq!(1, instruction_test("rv64ui-v-bgeu")); }
+
+#[test]
+fn rv64ui_v_blt() { assert_eq!(1, instruction_test("rv64ui-v-blt")); }
+
+#[test]
+fn rv64ui_v_bltu() { assert_eq!(1, instruction_test("rv64ui-v-bltu")); }
+
+#[test]
+fn rv64ui_v_bne() { assert_eq!(1, instruction_test("rv64ui-v-bne")); }
+
+#[test]
+fn rv64ui_v_fence_i() { assert_eq!(1, instruction_test("rv64ui-v-fence_i")); }
+
+#[test]
+fn rv64ui_v_jal() { assert_eq!(1, instruction_test("rv64ui-v-jal")); }
+
+#[test]
+fn rv64ui_v_jalr() { assert_eq!(1, instruction_test("rv64ui-v-jalr")); }
+
+#[test]
+fn rv64ui_v_lb() { assert_eq!(1, instruction_test("rv64ui-v-lb")); }
+
+#[test]
+fn rv64ui_v_lbu() { assert_eq!(1, instruction_test("rv64ui-v-lbu")); }
+
+#[test]
+fn rv64ui_v_ld() { assert_eq!(1, instruction_test("rv64ui-v-ld")); }
+
+#[test]
+fn rv64ui_v_lh() { assert_eq!(1, instruction_test("rv64ui-v-lh")); }
+
+#[test]
+fn rv64ui_v_lhu() { assert_eq!(1, instruction_test("rv64ui-v-lhu")); }
+
+#[test]
+fn rv64ui_v_lui() { assert_eq!(1, instruction_test("rv64ui-v-lui")); }
+
+#[test]
+fn rv64ui_v_lw() { assert_eq!(1, instruction_test("rv64ui-v-lw")); }
+
+#[test]
+fn rv64ui_v_lwu() { assert_eq!(1, instruction_test("rv64ui-v-lwu")); }
+
+#[test]
+fn rv64ui_v_or() { assert_eq!(1, instruction_test("rv64ui-v-or")); }
+
+#[test]
+fn rv64ui_v_ori() { assert_eq!(1, instruction_test("rv64ui-v-ori")); }
+
+#[test]
+fn rv64ui_v_sb() { assert_eq!(1, instruction_test("rv64ui-v-sb")); }
+
+#[test]
+fn rv64ui_v_sd() { assert_eq!(1, instruction_test("rv64ui-v-sd")); }
+
+#[test]
+fn rv64ui_v_sh() { assert_eq!(1, instruction_test("rv64ui-v-sh")); }
+
+#[test]
+fn rv64ui_v_simple() { assert_eq!(1, instruction_test("rv64ui-v-simple")); }
+
+#[test]
+fn rv64ui_v_sll() { assert_eq!(1, instruction_test("rv64ui-v-sll")); }
+
+#[test]
+fn rv64ui_v_slli() { assert_eq!(1, instruction_test("rv64ui-v-slli")); }
+
+#[test]
+fn rv64ui_v_slliw() { assert_eq!(1, instruction_test("rv64ui-v-slliw")); }
+
+#[test]
+fn rv64ui_v_sllw() { assert_eq!(1, instruction_test("rv64ui-v-sllw")); }
+
+#[test]
+fn rv64ui_v_slt() { assert_eq!(1, instruction_test("rv64ui-v-slt")); }
+
+#[test]
+fn rv64ui_v_slti() { assert_eq!(1, instruction_test("rv64ui-v-slti")); }
+
+#[test]
+fn rv64ui_v_sltiu() { assert_eq!(1, instruction_test("rv64ui-v-sltiu")); }
+
+#[test]
+fn rv64ui_v_sltu() { assert_eq!(1, instruction_test("rv64ui-v-sltu")); }
+
+#[test]
+fn rv64ui_v_sra() { assert_eq!(1, instruction_test("rv64ui-v-sra")); }
+
+#[test]
+fn rv64ui_v_srai() { assert_eq!(1, instruction_test("rv64ui-v-srai")); }
+
+#[test]
+fn rv64ui_v_sraiw() { assert_eq!(1, instruction_test("rv64ui-v-sraiw")); }
+
+#[test]
+fn rv64ui_v_sraw() { assert_eq!(1, instruction_test("rv64ui-v-sraw")); }
+
+#[test]
+fn rv64ui_v_srl() { assert_eq!(1, instruction_test("rv64ui-v-srl")); }
+
+#[test]
+fn rv64ui_v_srli() { assert_eq!(1, instruction_test("rv64ui-v-srli")); }
+
+#[test]
+fn rv64ui_v_srliw() { assert_eq!(1, instruction_test("rv64ui-v-srliw")); }
+
+#[test]
+fn rv64ui_v_srlw() { assert_eq!(1, instruction_test("rv64ui-v-srlw")); }
+
+#[test]
+fn rv64ui_v_sub() { assert_eq!(1, instruction_test("rv64ui-v-sub")); }
+
+#[test]
+fn rv64ui_v_subw() { assert_eq!(1, instruction_test("rv64ui-v-subw")); }
+
+#[test]
+fn rv64ui_v_sw() { assert_eq!(1, instruction_test("rv64ui-v-sw")); }
+
+#[test]
+fn rv64ui_v_xor() { assert_eq!(1, instruction_test("rv64ui-v-xor")); }
+
+#[test]
+fn rv64ui_v_xori() { assert_eq!(1, instruction_test("rv64ui-v-xori")); }
+
+//***********************************************************************
 // rv32um (RV32 user-level, Multiplication only), virtual memory is disable
 //***********************************************************************
 #[test]
@@ -349,6 +616,33 @@ fn rv32um_p_rem() { assert_eq!(1, instruction_test("rv32um-p-rem")); }
 
 #[test]
 fn rv32um_p_remu() { assert_eq!(1, instruction_test("rv32um-p-remu")); }
+
+//***********************************************************************
+// rv32um (RV32 user-level, Multiplication only), virtual memory is enable
+//***********************************************************************
+#[test]
+fn rv32um_v_div() { assert_eq!(1, instruction_test("rv32um-v-div")); }
+
+#[test]
+fn rv32um_v_divu() { assert_eq!(1, instruction_test("rv32um-v-divu")); }
+
+#[test]
+fn rv32um_v_mul() { assert_eq!(1, instruction_test("rv32um-v-mul")); }
+
+#[test]
+fn rv32um_v_mulh() { assert_eq!(1, instruction_test("rv32um-v-mulh")); }
+
+#[test]
+fn rv32um_v_mulhsu() { assert_eq!(1, instruction_test("rv32um-v-mulhsu")); }
+
+#[test]
+fn rv32um_v_mulhu() { assert_eq!(1, instruction_test("rv32um-v-mulhu")); }
+
+#[test]
+fn rv32um_v_rem() { assert_eq!(1, instruction_test("rv32um-v-rem")); }
+
+#[test]
+fn rv32um_v_remu() { assert_eq!(1, instruction_test("rv32um-v-remu")); }
 
 //***********************************************************************
 // rv64um (RV64M user-level, Multiplication only), virtual memory is disable
@@ -393,6 +687,48 @@ fn rv64um_p_remuw() { assert_eq!(1, instruction_test("rv64um-p-remuw")); }
 fn rv64um_p_remw() { assert_eq!(1, instruction_test("rv64um-p-remw")); }
 
 //***********************************************************************
+// rv64um (RV64M user-level, Multiplication only), virtual memory is enable
+//***********************************************************************
+#[test]
+fn rv64um_v_div() { assert_eq!(1, instruction_test("rv64um-v-div")); }
+
+#[test]
+fn rv64um_v_divu() { assert_eq!(1, instruction_test("rv64um-v-divu")); }
+
+#[test]
+fn rv64um_v_divuw() { assert_eq!(1, instruction_test("rv64um-v-divuw")); }
+
+#[test]
+fn rv64um_v_divw() { assert_eq!(1, instruction_test("rv64um-v-divw")); }
+
+#[test]
+fn rv64um_v_mul() { assert_eq!(1, instruction_test("rv64um-v-mul")); }
+
+#[test]
+fn rv64um_v_mulh() { assert_eq!(1, instruction_test("rv64um-v-mulh")); }
+
+#[test]
+fn rv64um_v_mulhsu() { assert_eq!(1, instruction_test("rv64um-v-mulhsu")); }
+
+#[test]
+fn rv64um_v_mulhu() { assert_eq!(1, instruction_test("rv64um-v-mulhu")); }
+
+#[test]
+fn rv64um_v_mulw() { assert_eq!(1, instruction_test("rv64um-v-mulw")); }
+
+#[test]
+fn rv64um_v_rem() { assert_eq!(1, instruction_test("rv64um-v-rem")); }
+
+#[test]
+fn rv64um_v_remu() { assert_eq!(1, instruction_test("rv64um-v-remu")); }
+
+#[test]
+fn rv64um_v_remuw() { assert_eq!(1, instruction_test("rv64um-v-remuw")); }
+
+#[test]
+fn rv64um_v_remw() { assert_eq!(1, instruction_test("rv64um-v-remw")); }
+
+//***********************************************************************
 // rv32ua (RV32A user-level, Atomic only), virtual memory is disable
 //***********************************************************************
 #[test]
@@ -424,6 +760,40 @@ fn rv32ua_p_amoxor_w() { assert_eq!(1, instruction_test("rv32ua-p-amoxor_w")); }
 
 #[test]
 fn rv32ua_p_lrsc() { assert_eq!(1, instruction_test("rv32ua-p-lrsc")); }
+
+
+//***********************************************************************
+// rv32ua (RV32A user-level, Atomic only), virtual memory is enable
+//***********************************************************************
+#[test]
+fn rv32ua_v_amoadd_w() { assert_eq!(1, instruction_test("rv32ua-v-amoadd_w")); }
+
+#[test]
+fn rv32ua_v_amoand_w() { assert_eq!(1, instruction_test("rv32ua-v-amoand_w")); }
+
+#[test]
+fn rv32ua_v_amomax_w() { assert_eq!(1, instruction_test("rv32ua-v-amomax_w")); }
+
+#[test]
+fn rv32ua_v_amomaxu_w() { assert_eq!(1, instruction_test("rv32ua-v-amomaxu_w")); }
+
+#[test]
+fn rv32ua_v_amomin_w() { assert_eq!(1, instruction_test("rv32ua-v-amomin_w")); }
+
+#[test]
+fn rv32ua_v_amominu_w() { assert_eq!(1, instruction_test("rv32ua-v-amominu_w")); }
+
+#[test]
+fn rv32ua_v_amoor_w() { assert_eq!(1, instruction_test("rv32ua-v-amoor_w")); }
+
+#[test]
+fn rv32ua_v_amoswap_w() { assert_eq!(1, instruction_test("rv32ua-v-amoswap_w")); }
+
+#[test]
+fn rv32ua_v_amoxor_w() { assert_eq!(1, instruction_test("rv32ua-v-amoxor_w")); }
+
+#[test]
+fn rv32ua_v_lrsc() { assert_eq!(1, instruction_test("rv32ua-v-lrsc")); }
 
 //***********************************************************************
 // rv64ua (RV64A user-level, Atomic only), virtual memory is disable
@@ -484,3 +854,63 @@ fn rv64ua_p_amoxor_d() { assert_eq!(1, instruction_test("rv64ua-p-amoxor_d")); }
 
 #[test]
 fn rv64ua_p_lrsc() { assert_eq!(1, instruction_test("rv64ua-p-lrsc")); }
+
+//***********************************************************************
+// rv64ua (RV64A user-level, Atomic only), virtual memory is enable
+//***********************************************************************
+#[test]
+fn rv64ua_v_amoadd_w() { assert_eq!(1, instruction_test("rv64ua-v-amoadd_w")); }
+
+#[test]
+fn rv64ua_v_amoadd_d() { assert_eq!(1, instruction_test("rv64ua-v-amoadd_d")); }
+
+#[test]
+fn rv64ua_v_amoand_w() { assert_eq!(1, instruction_test("rv64ua-v-amoand_w")); }
+
+#[test]
+fn rv64ua_v_amoand_d() { assert_eq!(1, instruction_test("rv64ua-v-amoand_d")); }
+
+#[test]
+fn rv64ua_v_amomax_w() { assert_eq!(1, instruction_test("rv64ua-v-amomax_w")); }
+
+#[test]
+fn rv64ua_v_amomax_d() { assert_eq!(1, instruction_test("rv64ua-v-amomax_d")); }
+
+#[test]
+fn rv64ua_v_amomaxu_w() { assert_eq!(1, instruction_test("rv64ua-v-amomaxu_w")); }
+
+#[test]
+fn rv64ua_v_amomaxu_d() { assert_eq!(1, instruction_test("rv64ua-v-amomaxu_d")); }
+
+#[test]
+fn rv64ua_v_amomin_w() { assert_eq!(1, instruction_test("rv64ua-v-amomin_w")); }
+
+#[test]
+fn rv64ua_v_amomin_d() { assert_eq!(1, instruction_test("rv64ua-v-amomin_d")); }
+
+#[test]
+fn rv64ua_v_amominu_w() { assert_eq!(1, instruction_test("rv64ua-v-amominu_w")); }
+
+#[test]
+fn rv64ua_v_amominu_d() { assert_eq!(1, instruction_test("rv64ua-v-amominu_d")); }
+
+#[test]
+fn rv64ua_v_amoor_w() { assert_eq!(1, instruction_test("rv64ua-v-amoor_w")); }
+
+#[test]
+fn rv64ua_v_amoor_d() { assert_eq!(1, instruction_test("rv64ua-v-amoor_d")); }
+
+#[test]
+fn rv64ua_v_amoswap_w() { assert_eq!(1, instruction_test("rv64ua-v-amoswap_w")); }
+
+#[test]
+fn rv64ua_v_amoswap_d() { assert_eq!(1, instruction_test("rv64ua-v-amoswap_d")); }
+
+#[test]
+fn rv64ua_v_amoxor_w() { assert_eq!(1, instruction_test("rv64ua-v-amoxor_w")); }
+
+#[test]
+fn rv64ua_v_amoxor_d() { assert_eq!(1, instruction_test("rv64ua-v-amoxor_d")); }
+
+#[test]
+fn rv64ua_v_lrsc() { assert_eq!(1, instruction_test("rv64ua-v-lrsc")); }

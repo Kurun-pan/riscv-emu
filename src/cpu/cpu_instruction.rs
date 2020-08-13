@@ -182,12 +182,12 @@ lazy_static! {
         m.insert(2, Instruction{
             mnemonic: "fsw",
             operation: fsw,
-            disassemble: disassemble_store,
+            disassemble: disassemble_s,
         });
         m.insert(3, Instruction{
             mnemonic: "fsd",
             operation: fsd,
-            disassemble: disassemble_store,
+            disassemble: disassemble_s,
         });
         m
     };
@@ -198,12 +198,12 @@ lazy_static! {
         m.insert(0, Instruction{
             mnemonic: "fence",
             operation: fence,
-            disassemble: disassemble_fence,
+            disassemble: disassemble_mnemonic,
         });
         m.insert(1, Instruction{
             mnemonic: "fence.i",
             operation: fence,
-            disassemble: disassemble_fence,
+            disassemble: disassemble_mnemonic,
         });
         m
     };
@@ -214,7 +214,7 @@ lazy_static! {
         m.insert(0, Instruction{
             mnemonic: "addi",
             operation: addi,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m.insert(1, Instruction{
             mnemonic: "slli",
@@ -224,27 +224,27 @@ lazy_static! {
         m.insert(2, Instruction{
             mnemonic: "slti",
             operation: slti,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m.insert(3, Instruction{
             mnemonic: "sltiu",
             operation: sltiu,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m.insert(4, Instruction{
             mnemonic: "xori",
             operation: xori,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m.insert(6, Instruction{
             mnemonic: "ori",
             operation: ori,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m.insert(7, Instruction{
             mnemonic: "andi",
             operation: andi,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m
     };
@@ -279,12 +279,12 @@ lazy_static! {
         m.insert(0, Instruction{
             mnemonic: "addiw",
             operation: addiw,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m.insert(1, Instruction{
             mnemonic: "slliw",
             operation: slliw,
-            disassemble: disassemble_computation,
+            disassemble: disassemble_precision_load,
         });
         m
     };
@@ -294,12 +294,12 @@ lazy_static! {
         m.insert((0, 5), Instruction{
             mnemonic: "srliw",
             operation: srliw,
-            disassemble: disassemble_computation_shamt,
+            disassemble: disassemble_precision_load,
         });
         m.insert((32, 5), Instruction{
             mnemonic: "sraiw",
             operation: sraiw,
-            disassemble: disassemble_computation_shamt,
+            disassemble: disassemble_precision_load,
         });
         m
     };
@@ -309,22 +309,22 @@ lazy_static! {
         m.insert(0, Instruction{
             mnemonic: "sb",
             operation: sb,
-            disassemble: disassemble_store,
+            disassemble: disassemble_s,
         });
         m.insert(1, Instruction{
             mnemonic: "sh",
             operation: sh,
-            disassemble: disassemble_store,
+            disassemble: disassemble_s,
         });
         m.insert(2, Instruction{
             mnemonic: "sw",
             operation: sw,
-            disassemble: disassemble_store,
+            disassemble: disassemble_s,
         });
         m.insert(3, Instruction{
             mnemonic: "sd",
             operation: sd,
-            disassemble: disassemble_store,
+            disassemble: disassemble_s,
         });
         m
     };
@@ -953,6 +953,124 @@ pub fn signed(cpu: &Cpu, data: i64) -> i64 {
 }
 
 //==============================================================================
+// DisAssembling functions for debug.
+//==============================================================================
+fn disassemble_i(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_i(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rd as usize]);
+    s += &format!(",{:x}", o.imm);
+    s += &format!("({:})", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s
+}
+
+fn disassemble_precision_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_i(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rd as usize]);
+    s += &format!(",{:}", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s += &format!(",{:x}", o.imm);
+    s
+}
+
+fn disassemble_computation_shamt(cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_i(word);
+    let shamt = match cpu.xlen {
+        Xlen::X64 => (word >> 20) & 0x3f,
+        Xlen::X32 => (word >> 20) & 0x1f,
+    };
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
+    s += &format!(":{:x}", cpu.x[o.rd as usize]);
+    s += &format!(",{:}", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x}", cpu.x[o.rs1 as usize]);
+    s += &format!(",{:x}", shamt);
+    s
+}
+
+fn disassemble_s(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_s(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rs2).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs2 as usize]);
+    s += &format!(",{:x}", o.imm);
+    s += &format!("({:})", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s
+}
+
+fn disassemble_csr(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_csr(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rd as usize]);
+    s += &format!(",{:x}", o.csr);
+    s += &format!(",{:}", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s
+}
+
+fn disassemble_mnemonic(_cpu: &Cpu, mnemonic: &str, _word: u32) -> String {
+    let mut s = String::new();
+    s += &format!("{}", mnemonic);
+    s
+}
+
+fn disassemble_u(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_u(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rd as usize]);
+    s += &format!(",{:x}", o.imm);
+    s
+}
+
+fn disassemble_r(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_r(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rd as usize]);
+    s += &format!(",{:}", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s += &format!(",{:}", REGISTERS.get(&o.rs2).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs2 as usize]);
+    s
+}
+
+fn disassemble_j(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_j(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rd as usize]);
+    s += &format!(",{:x}", o.imm);
+    s
+}
+
+fn disassemble_b(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
+    let o = parse_type_b(word);
+    let mut s = String::new();
+    s += &format!("{0: <10} ", mnemonic);
+    s += &format!("{:}", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s += &format!(",{:}", REGISTERS.get(&o.rs2).unwrap());
+    s += &format!(":{:x}", _cpu.x[o.rs2 as usize]);
+    s += &format!(",{:x}", o.imm);
+    s
+}
+
+//==============================================================================
 // Load Instructions (RV32I/RV64I)
 //==============================================================================
 // The LW instruction loads a 32-bit value from memory into rd. LH loads a 16-bit value from memory,
@@ -1066,19 +1184,6 @@ fn lui(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     Ok(())
 }
 
-fn disassemble_i(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_i(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1: },{2:x}({3:})",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        o.imm,
-        REGISTERS.get(&o.rs1).unwrap()
-    );
-    s
-}
-
 //==============================================================================
 // Store Instructions (RV32I/RV64I)
 //==============================================================================
@@ -1104,7 +1209,7 @@ fn sh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sw rs2,offset(rs1)]
 fn sw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
+    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u32;
     cpu.mmu.write32(addr, data)
 }
@@ -1115,19 +1220,6 @@ fn sd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
     let data = cpu.x[o.rs2 as usize] as u64;
     cpu.mmu.write64(addr, data)
-}
-
-fn disassemble_store(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_s(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:x}({3:})",
-        mnemonic,
-        REGISTERS.get(&o.rs2).unwrap(),
-        o.imm,
-        REGISTERS.get(&o.rs1).unwrap()
-    );
-    s
 }
 
 //==============================================================================
@@ -1183,19 +1275,6 @@ fn fsd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     cpu.mmu.write64(addr, cpu.f[o.rs2 as usize].to_bits())
 }
 
-fn disassemble_precision_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_i(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:},{3:x}",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        REGISTERS.get(&o.rs1).unwrap(),
-        o.imm
-    );
-    s
-}
-
 //==============================================================================
 // Memory Ordering Instructions
 //==============================================================================
@@ -1205,12 +1284,6 @@ fn disassemble_precision_load(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 fn fence(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
     // do nothing.
     Ok(())
-}
-
-fn disassemble_fence(_cpu: &Cpu, mnemonic: &str, _word: u32) -> String {
-    let mut s = String::new();
-    s += &format!("{}", mnemonic);
-    s
 }
 
 //==============================================================================
@@ -1454,61 +1527,6 @@ fn sraw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     Ok(())
 }
 
-fn disassemble_computation(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_i(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:},{3:x}",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        REGISTERS.get(&o.rs1).unwrap(),
-        o.imm
-    );
-    s
-}
-
-fn disassemble_computation_shamt(cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_i(word);
-    let shamt = match cpu.xlen {
-        Xlen::X64 => (word >> 20) & 0x3f,
-        Xlen::X32 => (word >> 20) & 0x1f,
-    };
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:},{3:}",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        REGISTERS.get(&o.rs1).unwrap(),
-        shamt
-    );
-    s
-}
-
-fn disassemble_u(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_u(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:x}",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        o.imm
-    );
-    s
-}
-
-fn disassemble_r(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_r(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:},{3:}",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        REGISTERS.get(&o.rs1).unwrap(),
-        REGISTERS.get(&o.rs2).unwrap()
-    );
-    s
-}
-
 //==============================================================================
 // Integer Register-Immediate Instructions (RV64I)
 //==============================================================================
@@ -1567,9 +1585,9 @@ fn jal(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// [jalr rd,rs1,offset]
 fn jalr(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    let temp = signed(cpu, (addr + 4) as i64);
+    let t = signed(cpu, (addr + 4) as i64);
     cpu.pc = (cpu.x[o.rs1 as usize] as u64).wrapping_add(o.imm as u64);
-    cpu.x[o.rd as usize] = temp;
+    cpu.x[o.rd as usize] = t;
     Ok(())
 }
 
@@ -1638,31 +1656,6 @@ fn bgeu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     Ok(())
 }
 
-fn disassemble_j(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_j(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:}",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        o.imm
-    );
-    s
-}
-
-fn disassemble_b(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_b(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:},{3:x}",
-        mnemonic,
-        REGISTERS.get(&o.rs1).unwrap(),
-        REGISTERS.get(&o.rs2).unwrap(),
-        o.imm
-    );
-    s
-}
-
 //==============================================================================
 // Control and Status Register (CSR) Instructions.
 //==============================================================================
@@ -1675,17 +1668,19 @@ fn disassemble_b(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
 fn csrrw(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    match cpu.x[o.rd as usize] {
-        0 /*cpu.x[0]*/ => {},
-        _ => {
-            match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-                Ok(data) => cpu.x[o.rd as usize] = data as i64,
-                Err(e) => return Err(e)
-            };
-        }
+    if o.rd != 0 /* x0 */ {
+        match cpu.csr.read(o.csr, addr, &cpu.privilege) {
+            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Err(e) => return Err(e)
+        };
     }
     match cpu.csr.write(o.csr, temp, addr, &cpu.privilege) {
-        Ok(()) => Ok(()),
+        Ok(need_update_mmu_addressing_mode) => {
+            if need_update_mmu_addressing_mode {
+                cpu.mmu.update_addressing_mode(temp);
+            }
+            Ok(())
+        }
         Err(e) => Err(e),
     }
 }
@@ -1694,17 +1689,19 @@ fn csrrw(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    match cpu.x[o.rd as usize] {
-        0 /*cpu.x[0]*/ => {},
-        _ => {
-            match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-                Ok(data) => cpu.x[o.rd as usize] = data as i64,
-                Err(e) => return Err(e)
-            };
-        }
+    if o.rd != 0 /* x0 */ {
+        match cpu.csr.read(o.csr, addr, &cpu.privilege) {
+            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Err(e) => return Err(e)
+        };
     }
     match cpu.csr.write(o.csr, temp, addr, &cpu.privilege) {
-        Ok(()) => Ok(()),
+        Ok(need_update_mmu_addressing_mode) => {
+            if need_update_mmu_addressing_mode {
+                cpu.mmu.update_addressing_mode(temp);
+            }
+            Ok(())
+        }
         Err(e) => Err(e),
     }
 }
@@ -1719,18 +1716,21 @@ fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-        Ok(data) => cpu.x[o.rd as usize] = data as i64,
-        Err(e) => return Err(e),
-    };
-    match cpu.x[o.rd as usize] {
-        0 /*cpu.x[0]*/ => Ok(()),
-        _ => {
-            match cpu.csr.write(o.csr, cpu.x[o.rd as usize] as u64 | temp, addr, &cpu.privilege) {
-                Ok(()) => Ok(()),
-                Err(e) => Err(e),
+    if o.rd != 0 /* x0 */ {
+        match cpu.csr.read(o.csr, addr, &cpu.privilege) {
+            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Err(e) => return Err(e),
+        };
+    }
+    let data = cpu.x[o.rd as usize] as u64 | temp;
+    match cpu.csr.write(o.csr, data, addr, &cpu.privilege) {
+        Ok(need_update_mmu_addressing_mode) => {
+            if need_update_mmu_addressing_mode {
+                cpu.mmu.update_addressing_mode(data);
             }
-        }
+            Ok(())
+        },
+        Err(e) => Err(e),
     }
 }
 
@@ -1738,18 +1738,21 @@ fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-        Ok(data) => cpu.x[o.rd as usize] = data as i64,
-        Err(e) => return Err(e),
-    };
-    match cpu.x[o.rd as usize] {
-        0 /*cpu.x[0]*/ => Ok(()),
-        _ => {
-            match cpu.csr.write(o.csr, cpu.x[o.rd as usize] as u64 | temp,  addr, &cpu.privilege) {
-                Ok(()) => Ok(()),
-                Err(e) => Err(e),
+    if o.rd != 0 /* x0 */ {
+        match cpu.csr.read(o.csr, addr, &cpu.privilege) {
+            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Err(e) => return Err(e),
+        };
+    }
+    let data = cpu.x[o.rd as usize] as u64 | temp;
+    match cpu.csr.write(o.csr, data,  addr, &cpu.privilege) {
+        Ok(need_update_mmu_addressing_mode) => {
+            if need_update_mmu_addressing_mode {
+                cpu.mmu.update_addressing_mode(data);
             }
-        }
+            Ok(())
+        },
+        Err(e) => Err(e),
     }
 }
 
@@ -1762,18 +1765,21 @@ fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-        Ok(data) => cpu.x[o.rd as usize] = data as i64,
-        Err(e) => return Err(e),
-    };
-    match cpu.x[o.rd as usize] {
-        0 /*cpu.x[0]*/ => Ok(()),
-        _ => {
-            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege) {
-                Ok(()) => Ok(()),
-                Err(e) => Err(e),
+    if o.rd != 0 /* x0 */ {
+        match cpu.csr.read(o.csr, addr, &cpu.privilege) {
+            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Err(e) => return Err(e),
+        };
+    }
+    let data = cpu.x[o.rd as usize] as u64 | !temp;
+    match cpu.csr.write(o.csr, data, addr, &cpu.privilege) {
+        Ok(need_update_mmu_addressing_mode) => {
+            if need_update_mmu_addressing_mode {
+                cpu.mmu.update_addressing_mode(data);
             }
-        }
+            Ok(())
+        },
+        Err(e) => Err(e),
     }
 }
 
@@ -1781,32 +1787,22 @@ fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrci(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-        Ok(data) => cpu.x[o.rd as usize] = data as i64,
-        Err(e) => return Err(e),
-    };
-    match cpu.x[o.rd as usize] {
-        0 /*cpu.x[0]*/ => Ok(()),
-        _ => {
-            match cpu.csr.write(o.csr,  cpu.x[o.rd as usize] as u64 | !temp, addr, &cpu.privilege) {
-                Ok(()) => Ok(()),
-                Err(e) => Err(e),
-            }
-        }
+    if o.rd != 0 /* x0 */ {
+        match cpu.csr.read(o.csr, addr, &cpu.privilege) {
+            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Err(e) => return Err(e),
+        };
     }
-}
-
-fn disassemble_csr(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
-    let o = parse_type_csr(word);
-    let mut s = String::new();
-    s += &format!(
-        "{0: <10} {1:},{2:x},{3:}",
-        mnemonic,
-        REGISTERS.get(&o.rd).unwrap(),
-        o.csr,
-        REGISTERS.get(&o.rs1).unwrap()
-    );
-    s
+    let data = cpu.x[o.rd as usize] as u64 | !temp;
+    match cpu.csr.write(o.csr, data, addr, &cpu.privilege) {
+        Ok(need_update_mmu_addressing_mode) => {
+            if need_update_mmu_addressing_mode {
+                cpu.mmu.update_addressing_mode(data);
+            }
+            Ok(())
+        },
+        Err(e) => Err(e),
+    }
 }
 
 //==============================================================================
@@ -1842,8 +1838,32 @@ fn uret(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
 }
 
 /// [sret]
-fn sret(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
-    panic!("TODO!!");
+fn sret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
+    cpu.pc = match cpu.csr.read(CSR_SEPC, addr, &cpu.privilege) {
+        Ok(data) => unsigned(cpu, data as i64),
+        Err(e) => return Err(e),
+    };
+
+    // update SSTATUS register.
+    let sstatus = cpu.csr.read_direct(CSR_SSTATUS);
+    let spp = (sstatus >> 8) & 1;
+    let spie = (sstatus >> 5) & 1;
+    cpu.csr.write_direct(
+        CSR_SSTATUS,
+        (sstatus & !0x122) | // set 0 to SPP, SPIE, SIE
+              (spie << 1) |   // set SPIE to SIE.
+              (1 << 5), // set 1 to SPIE
+    );
+
+    // update privilege by SPP.
+    // TODO: refactoring.
+    cpu.privilege = match spp {
+        0 => Privilege::User,
+        1 => Privilege::Supervisor,
+        _ => panic!("Unexpected Error!!"),
+    };
+    cpu.mmu.set_privilege(&cpu.privilege);
+    Ok(())
 }
 
 /// [mret]
@@ -1861,8 +1881,8 @@ fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
         CSR_MSTATUS,
         (mstatus & !0x1800) | // set 0 to MPP.
               (mpie << 3) |         // set MPIE to MIE.
-              (1 << 7),
-    ); // set 1 to MPIE
+              (1 << 7), // set 1 to MPIE
+    );
 
     // update privilege by MPP.
     // TODO: refactoring.
@@ -1891,12 +1911,6 @@ fn wfi(cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
 /// [sfence.vma]
 fn sfence(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
     Ok(())
-}
-
-fn disassemble_mnemonic(_cpu: &Cpu, mnemonic: &str, _word: u32) -> String {
-    let mut s = String::new();
-    s += &format!("{}", mnemonic);
-    s
 }
 
 //==============================================================================
