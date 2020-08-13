@@ -94,13 +94,13 @@ impl Emulator {
         println!("Start RISC-V Emulator!");
         loop {
             self.cpu.tick();
-            match self.cpu.mmu.read32(self.tohost) {
+            match self.cpu.mmu.read32_direct(self.tohost) {
                 Ok(data) => match data {
                     0 => {},
                     1 => return Ok(1),
                     n => return Err(n)
                 },
-                Err(e) => panic!("Faild to read .tohost")
+                Err(e) => panic!("Faild to read .tohost: {:?}", e.exception)
             }
         }
     }

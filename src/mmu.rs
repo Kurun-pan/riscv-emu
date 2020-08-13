@@ -6,6 +6,7 @@ use crate::system_bus::SystemBus;
 
 const PAGE_SIZE: u64 = 4096;
 
+#[derive(Debug)]
 pub enum AddressingMode {
     Bare,
     Sv32,
@@ -25,17 +26,17 @@ pub struct Mmu {
 }
 
 struct Pte {
-    ppn: u64,       // physical page number 
-    ppns: [u64; 3], 
-    _rsw: u8,       // reserved for use by supervisor software
-    d: u8,          // dirty
-    a: u8,          // accessed
-    _g: u8,         // global mapping
-    _u: u8,         // page is accessible to user mode
-    x: u8,          // execute permission
-    w: u8,          // write permission
-    r: u8,          // read permission
-    v: u8,          // PTE is valid
+    ppn: u64, // physical page number
+    ppns: [u64; 3],
+    _rsw: u8, // reserved for use by supervisor software
+    d: u8,    // dirty
+    a: u8,    // accessed
+    _g: u8,   // global mapping
+    _u: u8,   // page is accessible to user mode
+    x: u8,    // execute permission
+    w: u8,    // write permission
+    r: u8,    // read permission
+    v: u8,    // PTE is valid
 }
 
 enum MemoryAccessType {
@@ -64,24 +65,52 @@ impl Mmu {
         self.xlen = xlen.clone();
     }
 
+    pub fn update_addressing_mode(&mut self, data: u64) {
+        self.ppn = match self.xlen {
+            Xlen::X64 => data & 0xfffffffffff,
+            Xlen::X32 => data & 0x3fffff,
+        };
+
+        self.addressing_mode = match self.xlen {
+            Xlen::X64 => match data >> 60 {
+                0 => AddressingMode::Bare,
+                8 => AddressingMode::Sv39,
+                9 => AddressingMode::Sv48,
+                n => panic!(" {:x} is not implemented yet.", n),
+            }
+            Xlen::X32 => match data & 0x80000000 {
+                0 => AddressingMode::Bare,
+                _ => AddressingMode::Sv32
+            },
+        };
+
+        println!("update mode => {:?}", self.addressing_mode);
+    }
+
     pub fn set_address_reserve(&mut self, addr: u64, request_reserve: bool) {
         match request_reserve {
             true => self.reserved_address.insert(addr, true),
-            false => self.reserved_address.remove(&addr)
+            false => self.reserved_address.remove(&addr),
         };
     }
 
     pub fn is_address_reserved(&mut self, addr: u64) -> bool {
         match self.reserved_address.get_mut(&addr) {
             Some(_v) => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn read8(&mut self, v_addr: u64) -> Result<u8, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
-            Ok(p_addr) => self.bus.read8(p_addr),
+            Ok(p_addr) => match self.bus.read8(p_addr) {
+                Ok(data) => Ok(data),
+                Err(()) => Err(Trap {
+                    exception: Exception::LoadPageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
                 value: ev_addr,
@@ -91,9 +120,14 @@ impl Mmu {
 
     pub fn read16(&mut self, v_addr: u64) -> Result<u16, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
-        println!("read16: {:x}, {:x}", v_addr, ev_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
-            Ok(p_addr) => self.bus.read16(p_addr),
+            Ok(p_addr) => match self.bus.read16(p_addr) {
+                Ok(data) => Ok(data),
+                Err(()) => Err(Trap {
+                    exception: Exception::LoadPageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
                 value: ev_addr,
@@ -104,7 +138,13 @@ impl Mmu {
     pub fn read32(&mut self, v_addr: u64) -> Result<u32, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
-            Ok(p_addr) => self.bus.read32(p_addr),
+            Ok(p_addr) => match self.bus.read32(p_addr) {
+                Ok(data) => Ok(data),
+                Err(()) => Err(Trap {
+                    exception: Exception::LoadPageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
                 value: ev_addr,
@@ -112,10 +152,27 @@ impl Mmu {
         }
     }
 
+    pub fn read32_direct(&mut self, p_addr: u64) -> Result<u32, Trap> {
+        let ep_addr = self.to_effective_address(p_addr);
+        match self.bus.read32(p_addr) {
+            Ok(data) => Ok(data),
+            Err(()) => Err(Trap {
+                exception: Exception::LoadPageFault,
+                value: ep_addr,
+            }),
+        }
+    }
+
     pub fn read64(&mut self, v_addr: u64) -> Result<u64, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
-            Ok(p_addr) => self.bus.read64(p_addr),
+            Ok(p_addr) => match self.bus.read64(p_addr) {
+                Ok(data) => Ok(data),
+                Err(()) => Err(Trap {
+                    exception: Exception::LoadPageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
                 exception: Exception::LoadPageFault,
                 value: ev_addr,
@@ -126,9 +183,15 @@ impl Mmu {
     pub fn write8(&mut self, v_addr: u64, val: u8) -> Result<(), Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
-            Ok(p_addr) => self.bus.write8(p_addr, val),
+            Ok(p_addr) => match self.bus.write8(p_addr, val) {
+                Ok(()) => Ok(()),
+                Err(()) => Err(Trap {
+                    exception: Exception::StorePageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
+                exception: Exception::StorePageFault,
                 value: ev_addr,
             }),
         }
@@ -137,9 +200,15 @@ impl Mmu {
     pub fn write16(&mut self, v_addr: u64, val: u16) -> Result<(), Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
-            Ok(p_addr) => self.bus.write16(p_addr, val),
+            Ok(p_addr) => match self.bus.write16(p_addr, val) {
+                Ok(()) => Ok(()),
+                Err(()) => Err(Trap {
+                    exception: Exception::StorePageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
+                exception: Exception::StorePageFault,
                 value: ev_addr,
             }),
         }
@@ -148,9 +217,15 @@ impl Mmu {
     pub fn write32(&mut self, v_addr: u64, val: u32) -> Result<(), Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
-            Ok(p_addr) => self.bus.write32(p_addr, val),
+            Ok(p_addr) => match self.bus.write32(p_addr, val) {
+                Ok(()) => Ok(()),
+                Err(()) => Err(Trap {
+                    exception: Exception::StorePageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
+                exception: Exception::StorePageFault,
                 value: ev_addr,
             }),
         }
@@ -159,9 +234,15 @@ impl Mmu {
     pub fn write64(&mut self, v_addr: u64, val: u64) -> Result<(), Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
-            Ok(p_addr) => self.bus.write64(p_addr, val),
+            Ok(p_addr) => match self.bus.write64(p_addr, val) {
+                Ok(()) => Ok(()),
+                Err(()) => Err(Trap {
+                    exception: Exception::StorePageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
+                exception: Exception::StorePageFault,
                 value: ev_addr,
             }),
         }
@@ -170,9 +251,15 @@ impl Mmu {
     pub fn fetch32(&mut self, v_addr: u64) -> Result<u32, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
-            Ok(p_addr) => self.bus.read32(p_addr),
+            Ok(p_addr) => match self.bus.read32(p_addr) {
+                Ok(data) => Ok(data),
+                Err(()) => Err(Trap {
+                    exception: Exception::InstructionPageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
+                exception: Exception::InstructionPageFault,
                 value: ev_addr,
             }),
         }
@@ -182,24 +269,33 @@ impl Mmu {
     pub fn fetch16(&mut self, v_addr: u64) -> Result<u16, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
-            Ok(p_addr) => self.bus.read16(p_addr),
+            Ok(p_addr) => match self.bus.read16(p_addr) {
+                Ok(data) => Ok(data),
+                Err(()) => Err(Trap {
+                    exception: Exception::InstructionPageFault,
+                    value: ev_addr,
+                }),
+            },
             Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
+                exception: Exception::InstructionPageFault,
                 value: ev_addr,
             }),
         }
     }
 
-    fn to_physical_address(&mut self, v_addr: u64, access_type: MemoryAccessType) -> Result<u64, ()> {
+    fn to_physical_address(
+        &mut self,
+        v_addr: u64,
+        access_type: MemoryAccessType,
+    ) -> Result<u64, ()> {
+        //println!("AddressingMode = {:?}", self.addressing_mode);
+
         match self.addressing_mode {
             AddressingMode::Bare => Ok(v_addr),
             AddressingMode::Sv32 => match self.privilege {
                 Privilege::User | Privilege::Supervisor => {
-                    let vpns = [
-                        (v_addr >> 12) & 0x3ff,
-                        (v_addr >> 22) & 0x3ff
-                    ];
-                    self.traverse_pte(v_addr, 1, self.ppn, &vpns, &access_type)
+                    let vpns = [(v_addr >> 12) & 0x3ff, (v_addr >> 22) & 0x3ff];
+                    self.page_waking(v_addr, 1, self.ppn, &vpns, &access_type)
                 }
                 _ => Ok(v_addr),
             },
@@ -210,24 +306,30 @@ impl Mmu {
                         (v_addr >> 21) & 0x1ff,
                         (v_addr >> 30) & 0x1ff,
                     ];
-                    self.traverse_pte(v_addr, 2, self.ppn, &vpns, &access_type)
+                    self.page_waking(v_addr, 2, self.ppn, &vpns, &access_type)
                 }
                 _ => Ok(v_addr),
             },
             AddressingMode::Sv48 => {
                 panic!("AddressingMode SV48 is not implemented yet.");
-            },
+            }
             AddressingMode::Sv57 => {
                 panic!("AddressingMode SV57 is not implemented yet.");
-            },
+            }
             AddressingMode::Sv64 => {
                 panic!("AddressingMode SV64 is not implemented yet.");
-            },
+            }
         }
     }
 
-    fn traverse_pte(&mut self, v_addr: u64, level: u8, parent_ppn: u64,
-            vpns: &[u64], access_type: &MemoryAccessType) -> Result<u64, ()> {
+    fn page_waking(
+        &mut self,
+        v_addr: u64,
+        level: u8,
+        parent_ppn: u64,
+        vpns: &[u64],
+        access_type: &MemoryAccessType,
+    ) -> Result<u64, ()> {
         // 1. calc PTE address.
         let pte_size = match self.addressing_mode {
             AddressingMode::Sv32 => 4,
@@ -253,18 +355,23 @@ impl Mmu {
         if !(pte_d.r == 1 && pte_d.x == 1) {
             return match level {
                 0 => Err(()),
-                _ => self.traverse_pte(v_addr, level - 1, pte_d.ppn, vpns, access_type),
+                _ => self.page_waking(v_addr, level - 1, pte_d.ppn, vpns, access_type),
             };
         }
 
         // 6. check page-fault.
-        if pte_d.a == 0 || (match access_type {
+        if pte_d.a == 0
+            || (match access_type {
                 MemoryAccessType::Write => pte_d.d == 0,
-                _ => false }) {
-            let new_pte = pte | (1 << 6) | (match access_type {
-                MemoryAccessType::Write => 1 << 7,
-                _ => 0,
-            });
+                _ => false,
+            })
+        {
+            let new_pte = pte
+                | (1 << 6)
+                | (match access_type {
+                    MemoryAccessType::Write => 1 << 7,
+                    _ => 0,
+                });
             match self.addressing_mode {
                 AddressingMode::Sv32 => self.pte_write32(pte_addr, new_pte as u32),
                 _ => self.pte_write64(pte_addr, new_pte),
@@ -272,7 +379,7 @@ impl Mmu {
             // return Err(()); need page-fault exception?
         }
 
-        // 7. check access permission.        
+        // 7. check access permission.
         match access_type {
             MemoryAccessType::Fetch => {
                 if pte_d.x == 0 {
@@ -321,6 +428,7 @@ impl Mmu {
                 _ => panic!(),
             },
         };
+        //print!("p_addr = {:x}", p_addr);
         Ok(p_addr)
     }
 
@@ -330,29 +438,25 @@ impl Mmu {
             _ => (pte >> 10) & 0xfff_ffffffff,
         };
         let _ppns = match self.addressing_mode {
-            AddressingMode::Sv32 => [
-                (pte >> 10) & 0x3ff,
-                (pte >> 20) & 0xfff,
-                0
-            ],
+            AddressingMode::Sv32 => [(pte >> 10) & 0x3ff, (pte >> 20) & 0xfff, 0],
             _ => [
                 (pte >> 10) & 0x1ff,
                 (pte >> 19) & 0x1ff,
-                (pte >> 28) & 0x3ffffff
+                (pte >> 28) & 0x3ffffff,
             ],
         };
         Pte {
             ppn: _ppn,
             ppns: _ppns,
             _rsw: ((pte >> 8) & 0x3) as u8,
-            d:   ((pte >> 7) & 1) as u8,
-            a:   ((pte >> 6) & 1) as u8,
-            _g:  ((pte >> 5) & 1) as u8,
-            _u:  ((pte >> 4) & 1) as u8,
-            x:   ((pte >> 3) & 1) as u8,
-            w:   ((pte >> 2) & 1) as u8,
-            r:   ((pte >> 1) & 1) as u8,
-            v:   (pte & 1) as u8,
+            d: ((pte >> 7) & 1) as u8,
+            a: ((pte >> 6) & 1) as u8,
+            _g: ((pte >> 5) & 1) as u8,
+            _u: ((pte >> 4) & 1) as u8,
+            x: ((pte >> 3) & 1) as u8,
+            w: ((pte >> 2) & 1) as u8,
+            r: ((pte >> 1) & 1) as u8,
+            v: (pte & 1) as u8,
         }
     }
 
@@ -360,7 +464,7 @@ impl Mmu {
         let effective_addr = self.to_effective_address(addr);
         match self.bus.read32(effective_addr) {
             Ok(data) => data,
-            Err(e) => panic!(e)
+            Err(e) => panic!(e),
         }
     }
 
@@ -368,7 +472,7 @@ impl Mmu {
         let effective_addr = self.to_effective_address(addr);
         match self.bus.read64(effective_addr) {
             Ok(data) => data,
-            Err(e) => panic!(e)
+            Err(e) => panic!(e),
         }
     }
 
@@ -376,7 +480,7 @@ impl Mmu {
         let effective_addr = self.to_effective_address(addr);
         match self.bus.write32(effective_addr, data) {
             Ok(()) => (),
-            Err(e) => panic!(e)
+            Err(e) => panic!(e),
         }
     }
 
@@ -384,14 +488,14 @@ impl Mmu {
         let effective_addr = self.to_effective_address(addr);
         match self.bus.write64(effective_addr, data) {
             Ok(()) => (),
-            Err(e) => panic!(e)
+            Err(e) => panic!(e),
         }
     }
 
     fn to_effective_address(&self, addr: u64) -> u64 {
         match self.xlen {
             Xlen::X32 => addr & 0xffffffff,
-            Xlen::X64 => addr
+            Xlen::X64 => addr,
         }
     }
 }
