@@ -8,7 +8,7 @@ pub struct CompressedOpecode {
 
 pub struct CompressedInstruction {
     pub mnemonic: &'static str,
-    pub decompress: fn(cpu: &Cpu, word: u16) -> Result<u32, ()>,
+    pub decompress: fn(word: u16) -> Result<u32, ()>,
     pub disassemble: fn(cpu: &Cpu, mnemonic: &str, word: u16) -> String,
 }
 
@@ -323,7 +323,7 @@ pub fn instruction_decompress(cpu: &Cpu, instruction_addr: u64, word: u32) -> Re
     };
 
     match (opecodes.operation)(cpu, compressed_word) {
-        Ok(instruction) => (instruction.decompress)(cpu, compressed_word),
+        Ok(instruction) => (instruction.decompress)(compressed_word),
         Err(()) => panic!("Not found instruction: {:016x}", instruction_addr),
     }
 }
@@ -335,7 +335,7 @@ fn disassemble_mnemonic(_cpu: &Cpu, mnemonic: &str, _word: u16) -> String {
 }
 
 /// [c.addi4spn rd’,uimm]
-fn c_addi4spn(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_addi4spn(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 2) & 0x7) as u32;
     let uimm_ =
         (((word >> 7) & 0x30) | ((word >> 1) & 0x3c0) | ((word >> 4) & 0x4) | ((word >> 2) & 0x8))
@@ -354,13 +354,12 @@ fn c_addi4spn(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fld rd’,uimm(rs1’)]
-fn c_fld(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_fld(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.lw rd’,uimm(rs1’)]
-fn c_lw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_lw(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 2) & 0x7) as u32;
     let rs1_ = ((word >> 7) & 0x7) as u32;
     let uimm = (((word >> 7) & 0x38) | ((word >> 4) & 0x4) | ((word << 1) & 0x40)) as u32;
@@ -374,13 +373,12 @@ fn c_lw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.flw rd’,uimm(rs1’)]
-fn c_flw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_flw(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.ld rd’,uimm(rs1’)]
-fn c_ld(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_ld(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 2) & 0x7) as u32;
     let rs1_ = ((word >> 7) & 0x7) as u32;
     let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
@@ -394,13 +392,12 @@ fn c_ld(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fsd rd’,uimm(rs1’)]
-fn c_fsd(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_fsd(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.sw rd’,uimm(rs1’)]
-fn c_sw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_sw(word: u16) -> Result<u32, ()> {
     let rs2_ = ((word >> 2) & 0x7) as u32;
     let rs1_ = ((word >> 7) & 0x7) as u32;
     let uimm = (((word >> 7) & 0x38) | ((word >> 4) & 0x4) | ((word << 1) & 0x40)) as u32;
@@ -415,13 +412,12 @@ fn c_sw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fsw rd’,uimm(rs1’)]
-fn c_fsw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_fsw(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.sd rd’,uimm(rs1’)]
-fn c_sd(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_sd(word: u16) -> Result<u32, ()> {
     let rs2_ = ((word >> 2) & 0x7) as u32;
     let rs1_ = ((word >> 7) & 0x7) as u32;
     let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
@@ -436,13 +432,13 @@ fn c_sd(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.nop]
-fn c_nop(cpu: &Cpu, _word: u16) -> Result<u32, ()> {
+fn c_nop(_word: u16) -> Result<u32, ()> {
     // addi x0,x0,0
     Ok(0x13)
 }
 
 /// [c.addi rd,u[12:12]|u[6:2]]
-fn c_addi(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_addi(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x1f) as u32;
     let imm_ = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
 
@@ -459,13 +455,12 @@ fn c_addi(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.jal offset]
-fn c_jal(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_jal(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.addiw rd,imm]
-fn c_addiw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_addiw(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x1f) as u32;
     match rd_ {
         0 => Err(()),
@@ -487,7 +482,7 @@ fn c_addiw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.li rd,uimm]
-fn c_li(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_li(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x1f) as u32;
     let uimm = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
 
@@ -503,7 +498,7 @@ fn c_li(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.addi16sp imm]
-fn c_addi16sp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_addi16sp(word: u16) -> Result<u32, ()> {
     let rd_ = 2;
     let imm_ = (((word >> 3) & 0x200)
         | ((word >> 2) & 0x10)
@@ -528,7 +523,7 @@ fn c_addi16sp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.lui rd,uimm]
-fn c_lui(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_lui(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x1f) as u32;
     let imm_ = ((((word as u32) << 5) & 0x20000) | (((word as u32) << 10) & 0x1f000)) as u32;
     match imm_ {
@@ -547,7 +542,7 @@ fn c_lui(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.srli rd’,uimm]
-fn c_srli(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_srli(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let uimm = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
 
@@ -560,7 +555,7 @@ fn c_srli(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.srai rd’,uimm]
-fn c_srai(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_srai(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let uimm = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
 
@@ -573,7 +568,7 @@ fn c_srai(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.andi rd’,uimm]
-fn c_andi(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_andi(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let imm_ = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
 
@@ -590,7 +585,7 @@ fn c_andi(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.sub rd’,rd’]
-fn c_sub(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_sub(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let rs2_ = ((word >> 2) & 0x7) as u32;
 
@@ -603,7 +598,7 @@ fn c_sub(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.xor rd’,rd’]
-fn c_xor(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_xor(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let rs2_ = ((word >> 2) & 0x7) as u32;
 
@@ -616,7 +611,7 @@ fn c_xor(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.or rd’,rd’]
-fn c_or(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_or(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let rs2_ = ((word >> 2) & 0x7) as u32;
 
@@ -629,7 +624,7 @@ fn c_or(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.and rd’,rd’]
-fn c_and(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_and(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let rs2_ = ((word >> 2) & 0x7) as u32;
 
@@ -642,7 +637,7 @@ fn c_and(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.subw rd’,rs2’]
-fn c_subw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_subw(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let rs2_ = ((word >> 2) & 0x7) as u32;
 
@@ -655,7 +650,7 @@ fn c_subw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.addw rd’,rs2’]
-fn c_addw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_addw(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x7) as u32;
     let rs2_ = ((word >> 2) & 0x7) as u32;
 
@@ -668,87 +663,155 @@ fn c_addw(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.j offset]
-fn c_j(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+fn c_j(word: u16) -> Result<u32, ()> {
+    let offset = match word & 0x1000 {
+        0 => 0,
+        _ => 0xfffff000,
+    } | (((word >> 1) & 0x800)
+        | ((word >> 7) & 0x10)
+        | ((word >> 1) & 0x300)
+        | ((word << 2) & 0x400)
+        | ((word >> 1) & 0x40)
+        | ((word << 1) & 0x80)
+        | ((word >> 2) & 0xe)
+        | ((word << 3) & 0x20)) as u32;
+
+    // jal rd,offset
+    let op = 0x6f as u32;
+    let imm = (((offset >> 1) & 0x80000)
+        | ((offset << 8) & 0x7fe00)
+        | ((offset >> 3) & 0x100)
+        | ((offset >> 12) & 0xff))
+        << 12;
+    Ok(imm /*| (0 << 7)*/ | op)
 }
 
 /// [c.beqz rs1’,offset]
-fn c_beqz(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+fn c_beqz(word: u16) -> Result<u32, ()> {
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let offset = match word & 0x1000 {
+        0 => 0,
+        _ => 0xfffffe00,
+    } | (((word >> 4) & 0x100)
+        | ((word >> 7) & 0x18)
+        | ((word << 1) & 0xc0)
+        | ((word >> 2) & 0x6)
+        | ((word << 3) & 0x20)) as u32;
+
+    // beq rs1,rs2,offset
+    let op = 0x63 as u32;
+    let rs1 = 0; // x0
+    let rs2 = (rs1_ + 8) << 20;
+    let offset_h = (((offset >> 6) & 0x40) | ((offset >> 5) & 0x3f)) << 25;
+    let offset_l = ((offset & 0x1e) | ((offset >> 11) & 0x1)) << 7;
+    Ok(offset_h | rs2 | rs1 /*| (0 << 12)*/ | offset_l | op)
 }
 
 /// [c.bnez rs1’,offset]
-fn c_bnez(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+fn c_bnez(word: u16) -> Result<u32, ()> {
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let offset = match word & 0x1000 {
+        0 => 0,
+        _ => 0xfffffe00,
+    } | (((word >> 4) & 0x100)
+        | ((word >> 7) & 0x18)
+        | ((word << 1) & 0xc0)
+        | ((word >> 2) & 0x6)
+        | ((word << 3) & 0x20)) as u32;
+
+    // bne rs1,rs2,offset
+    let op = 0x63 as u32;
+    let rs1 = 0; // x0
+    let rs2 = (rs1_ + 8) << 20;
+    let offset_h = (((offset >> 6) & 0x40) | ((offset >> 5) & 0x3f)) << 25;
+    let offset_l = ((offset & 0x1e) | ((offset >> 11) & 0x1)) << 7;
+    Ok(offset_h | rs2 | rs1 | (1 << 12) | offset_l | op)
 }
 
 /// [c.slli rd,uimm]
-fn c_slli(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+fn c_slli(word: u16) -> Result<u32, ()> {
+    let rd_ = ((word >> 7) & 0x1f) as u32;
+    let uimm = (((word >> 7) & 0x20) | ((word >> 2) & 0x1f)) as u32;
+
+    // slli rd,rs1,shamt
+    let op = 0x13 as u32;
+    let shamt = uimm << 20;
+    let rs1 = rd_ << 15;
+    let rd = rd_ << 7;
+    Ok(shamt | rs1 | 1 << 12 | rd | op)
 }
 
 /// [c.fldsp rd,uimm(x2)]
-fn c_fldsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_fldsp(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.lwsp rd,uimm(x2)]
-fn c_lwsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_lwsp(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.flwsp rd,uimm(x2)]
-fn c_flwsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_flwsp(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.ldsp rd,uimm(x2)]
-fn c_ldsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_ldsp(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.jr rs1]
-fn c_jr(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+fn c_jr(word: u16) -> Result<u32, ()> {
+    let rs1_ = ((word >> 7) & 0x1f) as u32;
+    match rs1_ {
+        0 => Err(()),
+        _ => {
+            // jalr rd,rs1,offset
+            let op = 0x67 as u32;
+            let offset = 0 << 20;
+            let rs1 = rs1_ << 15;
+            let rd = 0 << 7; // x0
+            Ok(offset | rs1 | 0 << 12 | rd | op)
+        }
+    }
 }
 
 /// [c.mv rd,rs2’]
-fn c_mv(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_mv(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.ebreak]
-fn c_ebreak(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_ebreak(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.jalr rd]
-fn c_jalr(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+fn c_jalr(word: u16) -> Result<u32, ()> {
+    let rs1_ = ((word >> 7) & 0x1f) as u32;
+    match rs1_ {
+        0 => Err(()),
+        _ => {
+            // jalr rd,rs1,offset
+            let op = 0x67 as u32;
+            let offset = 0 << 20;
+            let rs1 = rs1_ << 15;
+            let rd = 1 << 7; // x1
+            Ok(offset | rs1 | 0 << 12 | rd | op)
+        }
+    }
 }
 
 /// [c.add rd,rs2’]
-fn c_add(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_add(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 7) & 0x1f) as u32;
     let rs2_ = ((word >> 2) & 0x1f) as u32;
 
-    // add rd,rs1,rs2
     match rd_ == 0 || rs2_ == 0 {
         true => Err(()),
         _ => {
-            // lui rd,imm
+            // add rd,rs1,rs2
             let op = 0x33 as u32;
             let rd = rd_ << 7;
             let rs1 = rd_ << 15;
@@ -759,25 +822,30 @@ fn c_add(cpu: &Cpu, word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fsdsp rs2,uimm(x2)]
-fn c_fsdsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_fsdsp(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.swsp rs2,uimm(x2)]
-fn c_swsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_swsp(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.fswsp rs2,uimm(rs2)]
-fn c_fswsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
+fn c_fswsp(word: u16) -> Result<u32, ()> {
     panic!("TODO");
-    Ok(0)
 }
 
 /// [c.sdsp rs2,uimm(x2)]
-fn c_sdsp(cpu: &Cpu, word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-    Ok(0)
+fn c_sdsp(word: u16) -> Result<u32, ()> {
+    let rs2_ = ((word >> 2) & 0x1f) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word >> 1) & 0x1c0)) as u32;
+
+    // sd rs2,offset(rs1)
+    let op = 0x23 as u32;
+    let rs1 = 2 << 15; // x2
+    let rs2 = rs2_ << 20;
+    let offset_h = ((uimm >> 5) & 0x3f) << 25;
+    let offset_l = (uimm & 0x1f) << 7;
+    Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
 }

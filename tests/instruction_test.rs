@@ -914,3 +914,15 @@ fn rv64ua_v_amoxor_d() { assert_eq!(1, instruction_test("rv64ua-v-amoxor_d")); }
 
 #[test]
 fn rv64ua_v_lrsc() { assert_eq!(1, instruction_test("rv64ua-v-lrsc")); }
+
+//***********************************************************************
+// rv32uc (RV32C user-level), virtual memory is disabled
+//***********************************************************************
+#[test]
+fn rv32uc_p_rvc() { assert_eq!(1, instruction_test("rv32uc-p-rvc")); }
+
+//***********************************************************************
+// rv64uc (RV64C user-level), virtual memory is disabled
+//***********************************************************************
+#[test]
+fn rv64uc_p_rvc() { assert_eq!(1, instruction_test("rv64uc-p-rvc")); }
