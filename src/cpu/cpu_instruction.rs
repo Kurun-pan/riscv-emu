@@ -1578,15 +1578,15 @@ fn sraiw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// x5 as an alternate link register.
 fn jal(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_j(word);
-    cpu.x[o.rd as usize] = signed(cpu, (addr + 4) as i64);
+    cpu.x[o.rd as usize] = signed(cpu, cpu.pc as i64);
     cpu.pc = addr.wrapping_add(o.imm);
     Ok(())
 }
 
 /// [jalr rd,rs1,offset]
-fn jalr(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
+fn jalr(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_i(word);
-    let t = signed(cpu, (addr + 4) as i64);
+    let t = signed(cpu, cpu.pc as i64);
     cpu.pc = (cpu.x[o.rs1 as usize] as u64).wrapping_add(o.imm as u64);
     cpu.x[o.rd as usize] = t;
     Ok(())
