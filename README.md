@@ -14,7 +14,7 @@
 - [ ] RV32D
 - [ ] RV32V
 - [x] RV32A
-- [ ] RV32C
+- [x] RV32C (Partially implemented)
 
 ### 64-bit
 
@@ -24,7 +24,7 @@
 - [ ] RV64D
 - [ ] RV64V
 - [x] RV64A
-- [ ] RV64C
+- [x] RV64C (Partially implemented)
 
 ## Surpport Virtual Memory
 
@@ -34,9 +34,20 @@
 - [ ] SV57
 - [ ] SV64
 
+## Peripherals
+
+- [x] Timer ([CLINT](https://static.dev.sifive.com/FU540-C000-v1.0.pdf))
+- [x] Uart (UART 16550)
+- [ ] Virtio
+
+## Support OS
+
+I'm working now..
+ - [xv6](https://github.com/mit-pdos/xv6-riscv)
+
 # Tests
 
-## Regression Tests for Instructions
+## Instruction Regression Tests
 
 ```
 $ cargo test
