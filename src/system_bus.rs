@@ -1,15 +1,32 @@
 use crate::dram::Dram;
 use crate::peripherals::timer::Timer;
+use crate::peripherals::uart::Uart;
 
 pub const TIMER_ADDRESS_START: u64 = 0x0200_0000;
-pub const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
+pub const TIMER_ADDRESS_END:   u64 = 0x0200_FFFF;
 
-pub const DRAM_ADDRESS_START: u64 = 0x8000_0000;
+pub const UART_ADDRESS_START:  u64 = 0x1000_0000;
+pub const UART_ADDRESS_END:    u64 = 0x1000_FFFF;
+
+pub const DRAM_ADDRESS_START:  u64 = 0x8000_0000;
+
+// Physical memory layout
+// -------------------------------------------------
+// 00001000 -- boot ROM, provided by qemu
+// 02000000 -- CLINT
+// 0C000000 -- PLIC
+// 10000000 -- uart0 
+// 10001000 -- virtio disk 
+// 80000000 -- boot ROM jumps here in machine mode
+//             -kernel loads the kernel here
+// unused RAM after 80000000.
+// -------------------------------------------------
 
 pub struct SystemBus {
-    clock: u128,
+    clock: u64,
     pub dram: Dram,
-    pub timer: Timer,
+    timer: Timer,
+    uart: Uart,
 }
 
 impl SystemBus {
@@ -18,14 +35,21 @@ impl SystemBus {
             clock: 0,
             dram: Dram::new(),
             timer: Timer::new(),
+            uart: Uart::new(),
         }
     }
 
     pub fn tick(&mut self) {
         self.clock = self.clock.wrapping_add(1);
+
+        // TODO: care 1MHz clock (RTCCLK).
         if self.clock & 0xf == 0 {
-            // TODO: care 1MHz clock (RTCCLK).
             self.timer.tick();
+        }
+
+        // TODO: care ???Hz clock
+        if self.clock & 0xf == 0 {
+            self.uart.tick();
         }
     }
 
@@ -35,6 +59,7 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.read(addr - UART_ADDRESS_START)),
             _ => Err(()),
         }
     }
@@ -45,6 +70,12 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            UART_ADDRESS_START..=UART_ADDRESS_END => {
+                let addr_ = addr - UART_ADDRESS_START;
+                let data = self.uart.read(addr_) as u16
+                    | ((self.uart.read(addr_.wrapping_add(1)) as u16) << 8);
+                Ok(data)
+            }
             _ => Err(()),
         }
     }
@@ -56,6 +87,14 @@ impl SystemBus {
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.read(addr - TIMER_ADDRESS_START))
+            }
+            UART_ADDRESS_START..=UART_ADDRESS_END => {
+                let addr_ = addr - UART_ADDRESS_START;
+                let data = self.uart.read(addr_) as u32
+                    | ((self.uart.read(addr_.wrapping_add(1)) as u32) << 8)
+                    | ((self.uart.read(addr_.wrapping_add(2)) as u32) << 16)
+                    | ((self.uart.read(addr_.wrapping_add(3)) as u32) << 24);
+                    Ok(data)
             }
             _ => Err(()),
         }
@@ -72,6 +111,18 @@ impl SystemBus {
                     | ((self.timer.read(timer_addr.wrapping_add(4)) as u64) << 32);
                 Ok(data)
             }
+            UART_ADDRESS_START..=UART_ADDRESS_END => {
+                let addr_ = addr - UART_ADDRESS_START;
+                let data = self.uart.read(addr_) as u64
+                    | ((self.uart.read(addr_.wrapping_add(1)) as u64) << 8)
+                    | ((self.uart.read(addr_.wrapping_add(2)) as u64) << 16)
+                    | ((self.uart.read(addr_.wrapping_add(3)) as u64) << 24)
+                    | ((self.uart.read(addr_.wrapping_add(4)) as u64) << 32)
+                    | ((self.uart.read(addr_.wrapping_add(5)) as u64) << 40)
+                    | ((self.uart.read(addr_.wrapping_add(6)) as u64) << 48)
+                    | ((self.uart.read(addr_.wrapping_add(7)) as u64) << 56);
+                    Ok(data)
+            }
             _ => Err(()),
         }
     }
@@ -82,6 +133,7 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.write(addr - UART_ADDRESS_START, val)),
             _ => Err(()),
         }
     }
@@ -92,6 +144,12 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            UART_ADDRESS_START..=UART_ADDRESS_END => {
+                let addr_ = addr - UART_ADDRESS_START;
+                self.uart.write(addr_, (val & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(1), ((val >> 8) & 0xff) as u8);
+                Ok(())
+            }
             _ => Err(()),
         }
     }
@@ -103,6 +161,14 @@ impl SystemBus {
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.write(addr - TIMER_ADDRESS_START, val))
+            }
+            UART_ADDRESS_START..=UART_ADDRESS_END => {
+                let addr_ = addr - UART_ADDRESS_START;
+                self.uart.write(addr_, (val & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(1), ((val >> 8) & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(2), ((val >> 16) & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(3), ((val >> 24) & 0xff) as u8);
+                Ok(())
             }
             _ => Err(()),
         }
@@ -118,6 +184,18 @@ impl SystemBus {
                 self.timer.write(timer_addr, val as u32);
                 self.timer
                     .write(timer_addr.wrapping_add(4), (val >> 32 & 0xffff) as u32);
+                Ok(())
+            }
+            UART_ADDRESS_START..=UART_ADDRESS_END => {
+                let addr_ = addr - UART_ADDRESS_START;
+                self.uart.write(addr_, (val & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(1), ((val >> 8) & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(2), ((val >> 16) & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(3), ((val >> 24) & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(4), ((val >> 32) & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(5), ((val >> 40) & 0xff) as u8);                
+                self.uart.write(addr_.wrapping_add(6), ((val >> 48) & 0xff) as u8);
+                self.uart.write(addr_.wrapping_add(7), ((val >> 56) & 0xff) as u8);
                 Ok(())
             }
             _ => Err(()),
