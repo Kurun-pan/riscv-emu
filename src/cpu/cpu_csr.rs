@@ -130,9 +130,9 @@ impl Csr {
         self.csr[addr as usize]
     }
 
-    pub fn read_modify_write_direct(&mut self, addr: u16, bitmask: u64) {
+    pub fn read_modify_write_direct(&mut self, addr: u16, smask: u64, cmask: u64) {
         let data = self.csr[addr as usize];
-        self.csr[addr as usize] = data | bitmask;
+        self.csr[addr as usize] = (data & !cmask) | smask;
     }
 
     pub fn write(

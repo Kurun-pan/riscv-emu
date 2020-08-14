@@ -71,15 +71,17 @@ impl Plic {
             }
         }
 
-        let mut irqs = vec![false, false];
+        let mut irqs = vec![false, false, false, false];
         if irq_m != 0 {
-            irqs[0] = true;
+            irqs[3] = true;
             self.mclaim[core] = irq_m;
         }
+        irqs[2] = false; // Hypervisor
         if irq_s != 0 {
             irqs[1] = true;
             self.sclaim[core] = irq_s;
         }
+        irqs[0] = false; // User
         irqs
     }
 

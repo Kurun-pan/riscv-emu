@@ -79,11 +79,22 @@ impl Cpu {
         // run peripherals.        
         let bus = self.mmu.get_bus();
         let irqs = bus.tick();
-        if irqs[0] {
 
+        // set external interrupts to CSR register.
+        if irqs[Privilege::Machine as usize] {
+            self.csr.read_modify_write_direct(CSR_MIP, 0x800, 0);
         }
-        if irqs[1] {
-            
+        if irqs[Privilege::Hypervisor as usize] {
+            self.csr.read_modify_write_direct(CSR_MIP, 0x400, 0);
+        }
+        if irqs[Privilege::Supervisor as usize] {
+            self.csr.read_modify_write_direct(CSR_MIP, 0x200, 0);
+            self.csr.read_modify_write_direct(CSR_SIP, 0x200, 0);
+        }
+        if irqs[Privilege::User as usize] {
+            self.csr.read_modify_write_direct(CSR_MIP, 0x100, 0);
+            self.csr.read_modify_write_direct(CSR_SIP, 0x100, 0);
+            self.csr.read_modify_write_direct(CSR_UIP, 0x100, 0);
         }
     }
 
@@ -222,8 +233,23 @@ impl Cpu {
             }, trap.value);
         }
 
-        // update MSTATUS register.
-        // TODO:!!
+        // update CSR/xSTATUS register.
+        match self.privilege {
+            Privilege::User => panic!("TODO: SSTATUS spec is existing?"),
+            Privilege::Supervisor => {
+                let sstatus = self.csr.read_direct(CSR_SSTATUS);
+                let spie = ((sstatus >> 1) & 0x1) << 5;
+                let data = (sstatus & !0x122) | spie | (1 << 8);
+                self.csr.write_direct(CSR_SSTATUS, data);
+            },
+            Privilege::Hypervisor => panic!("TODO: HSTATUS spec is existing?"),
+            Privilege::Machine => {
+                let mstatus = self.csr.read_direct(CSR_MSTATUS);
+                let mpie = ((mstatus >> 3) & 0x1) << 7;
+                let data = (mstatus & !0x1888) | mpie | (3 << 11);
+                self.csr.write_direct(CSR_MSTATUS, data);
+            },
+        };
     }
 
     fn check_interrupt(&mut self) -> Option<Interrupt> {
@@ -249,6 +275,11 @@ impl Cpu {
 
     fn interrupt_handler(&mut self, interrupt: Interrupt) {
         println!("  >> Interrupt: {:?} ({:?})", interrupt, self.privilege);
+
+
+
+
+
 
         // clear interrupt.
         {

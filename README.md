@@ -38,12 +38,13 @@
 
 - [x] Timer ([CLINT](https://static.dev.sifive.com/FU540-C000-v1.0.pdf))
 - [x] Uart (UART 16550)
+- [x] Interrupt Controller (PLIC)
 - [ ] Virtio
 
 ## Support OS
 
 I'm working now..
- - [xv6](https://github.com/mit-pdos/xv6-riscv)
+ - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
 
 # Tests
 

@@ -62,7 +62,7 @@ impl SystemBus {
 
         let mut interrupts: Vec<usize> = Vec::new();
         if interrupt_uart {
-            interrupts.push(10); // Interrupt ID for UART0
+             interrupts.push(10); // Interrupt ID for UART0
         }
         self.intc.tick(0, interrupts)
     }
