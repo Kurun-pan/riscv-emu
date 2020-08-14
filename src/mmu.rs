@@ -100,6 +100,10 @@ impl Mmu {
         }
     }
 
+    pub fn get_bus(&mut self) -> &mut SystemBus {
+        &mut self.bus
+    }
+
     pub fn read8(&mut self, v_addr: u64) -> Result<u8, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Read) {

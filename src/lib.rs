@@ -8,3 +8,4 @@ pub mod dram;
 pub mod mmu;
 pub mod system_bus;
 pub mod elf_loader;
+pub mod peripherals;

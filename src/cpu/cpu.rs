@@ -76,7 +76,8 @@ impl Cpu {
             Err(e) => self.catch_exception(e, instruction_addr),
         }
 
-        // TODO: imple timer.
+        let bus = self.mmu.get_bus();
+        bus.tick();
     }
 
     fn tick_do(&mut self) -> Result<(), Trap> {

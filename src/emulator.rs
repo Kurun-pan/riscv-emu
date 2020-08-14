@@ -1,6 +1,6 @@
 use crate::cpu::cpu::{Cpu, Xlen};
 use crate::elf_loader::{EMachine, EiClass, ElfLoader, ShType};
-use crate::system_bus::DRAM_BASE_ADDRESS;
+use crate::system_bus::DRAM_ADDRESS_START;
 
 use std::path::Path;
 
@@ -26,7 +26,7 @@ impl Emulator {
     }
 
     pub fn load_dram_data(&mut self, data: Vec<u8>) {
-        self.cpu.mmu.bus.dram.initialize(data);
+        self.cpu.mmu.get_bus().dram.initialize(data);
     }
 
     pub fn load_program(&mut self, filename: &Path) {
@@ -66,7 +66,7 @@ impl Emulator {
         }
 
         for i in 0..progbits_sec_headers.len() {
-            if progbits_sec_headers[i].sh_addr >= DRAM_BASE_ADDRESS
+            if progbits_sec_headers[i].sh_addr >= DRAM_ADDRESS_START
                 && progbits_sec_headers[i].sh_offset > 0
             {
                 for j in 0..progbits_sec_headers[i].sh_size {
