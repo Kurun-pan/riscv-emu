@@ -1,4 +1,3 @@
-
 use crate::peripherals::fu540_c000::clint::Clint;
 
 pub struct Timer {

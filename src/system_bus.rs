@@ -1,9 +1,13 @@
 use crate::dram::Dram;
 use crate::peripherals::timer::Timer;
 use crate::peripherals::uart::Uart;
+use crate::peripherals::intc::Intc;
 
 pub const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 pub const TIMER_ADDRESS_END:   u64 = 0x0200_FFFF;
+
+pub const INTC_ADDRESS_START:  u64 = 0x0C00_0000;
+pub const INTC_ADDRESS_END:    u64 = 0x0FFF_FFFF;
 
 pub const UART_ADDRESS_START:  u64 = 0x1000_0000;
 pub const UART_ADDRESS_END:    u64 = 0x1000_FFFF;
@@ -26,6 +30,7 @@ pub struct SystemBus {
     clock: u64,
     pub dram: Dram,
     timer: Timer,
+    intc: Intc,
     uart: Uart,
 }
 
@@ -35,11 +40,12 @@ impl SystemBus {
             clock: 0,
             dram: Dram::new(),
             timer: Timer::new(),
+            intc: Intc::new(),
             uart: Uart::new(),
         }
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> Vec<bool> {
         self.clock = self.clock.wrapping_add(1);
 
         // TODO: care 1MHz clock (RTCCLK).
@@ -48,9 +54,17 @@ impl SystemBus {
         }
 
         // TODO: care ???Hz clock
+        let mut interrupt_uart = false;
         if self.clock & 0xf == 0 {
             self.uart.tick();
+            interrupt_uart = self.uart.is_irq();
         }
+
+        let mut interrupts: Vec<usize> = Vec::new();
+        if interrupt_uart {
+            interrupts.push(10); // Interrupt ID for UART0
+        }
+        self.intc.tick(0, interrupts)
     }
 
     pub fn read8(&mut self, addr: u64) -> Result<u8, ()> {
@@ -59,6 +73,7 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            INTC_ADDRESS_START..=INTC_ADDRESS_START => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.read(addr - UART_ADDRESS_START)),
             _ => Err(()),
         }
@@ -70,6 +85,7 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            INTC_ADDRESS_START..=INTC_ADDRESS_START => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
                 let data = self.uart.read(addr_) as u16
@@ -87,6 +103,9 @@ impl SystemBus {
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.read(addr - TIMER_ADDRESS_START))
+            }
+            INTC_ADDRESS_START..=INTC_ADDRESS_START => {
+                Ok(self.intc.read(addr - INTC_ADDRESS_START))
             }
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
@@ -111,6 +130,12 @@ impl SystemBus {
                     | ((self.timer.read(timer_addr.wrapping_add(4)) as u64) << 32);
                 Ok(data)
             }
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => {
+                let intc_addr = addr - INTC_ADDRESS_START;
+                let data = self.intc.read(intc_addr) as u64
+                    | ((self.intc.read(intc_addr.wrapping_add(4)) as u64) << 32);
+                Ok(data)
+            }
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
                 let data = self.uart.read(addr_) as u64
@@ -133,6 +158,7 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.write(addr - UART_ADDRESS_START, val)),
             _ => Err(()),
         }
@@ -144,6 +170,7 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
                 self.uart.write(addr_, (val & 0xff) as u8);
@@ -161,6 +188,9 @@ impl SystemBus {
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.write(addr - TIMER_ADDRESS_START, val))
+            }
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => {
+                Ok(self.intc.write(addr - INTC_ADDRESS_START, val))
             }
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
@@ -184,6 +214,13 @@ impl SystemBus {
                 self.timer.write(timer_addr, val as u32);
                 self.timer
                     .write(timer_addr.wrapping_add(4), (val >> 32 & 0xffff) as u32);
+                Ok(())
+            }
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => {
+                let intc_addr = addr - INTC_ADDRESS_START;
+                self.intc.write(intc_addr, val as u32);
+                self.intc
+                    .write(intc_addr.wrapping_add(4), (val >> 32 & 0xffff) as u32);
                 Ok(())
             }
             UART_ADDRESS_START..=UART_ADDRESS_END => {

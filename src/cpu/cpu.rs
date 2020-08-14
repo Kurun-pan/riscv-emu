@@ -76,8 +76,15 @@ impl Cpu {
             Err(e) => self.catch_exception(e, instruction_addr),
         }
 
+        // run peripherals.        
         let bus = self.mmu.get_bus();
-        bus.tick();
+        let irqs = bus.tick();
+        if irqs[0] {
+
+        }
+        if irqs[1] {
+            
+        }
     }
 
     fn tick_do(&mut self) -> Result<(), Trap> {
