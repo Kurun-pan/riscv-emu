@@ -730,10 +730,10 @@ fn opecode_13(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     match funct3 {
         5 => {
-            let funct7 = ((word & 0xfe000000) >> 25) as u8;
+            let funct7 = ((word & 0xfc000000) >> 25) as u8;
             match INSTRUCTIONS_GROUP13_SUB.get(&(funct7, funct3)) {
                 Some(instruction) => Ok(&instruction),
-                None => panic!("Not found instruction!"),
+                None => panic!("Not found instruction!",),
             }
         }
         _ => match INSTRUCTIONS_GROUP13.get(&funct3) {
