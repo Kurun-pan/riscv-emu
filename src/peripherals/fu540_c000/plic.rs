@@ -13,6 +13,9 @@
 #define PLIC_MCLAIM(hart) (PLIC + 0x200004 + (hart)*0x2000)
 #define PLIC_SCLAIM(hart) (PLIC + 0x201004 + (hart)*0x2000)
 */
+
+use crate::peripherals::intc::Intc;
+
 const _PLIC_PRIORITY_BASE: u64 = 0;
 const PLIC_PENDING_BASE: u64 = 0x1000;
 const PLIC_MENABLE_BASE: u64 = 0x2000;
@@ -49,8 +52,10 @@ impl Plic {
             sclaim: [0; PLIC_CORE_MAX],
         }
     }
+}
 
-    pub fn tick(&mut self, core: usize, interrupts: Vec<usize>) -> Vec<bool> {
+impl Intc for Plic {
+    fn tick(&mut self, core: usize, interrupts: Vec<usize>) -> Vec<bool> {
         // TODO: support multi cores.
         let mut irq_m = 0;
         let mut max_priority_m = 0;
@@ -87,7 +92,7 @@ impl Plic {
 
     /// The PLIC memory map has been designed to only require naturally 
     /// aligned 32-bit memory accesses.
-    pub fn read(&mut self, addr: u64) -> u32 {
+    fn read(&mut self, addr: u64) -> u32 {
         let e_addr = addr & 0x3f_fffc;
 
         if e_addr < PLIC_PENDING_BASE {
@@ -126,7 +131,7 @@ impl Plic {
         panic!("Read to reserved area: {:x}", addr);
     }
 
-    pub fn write(&mut self, addr: u64, data: u32) {
+    fn write(&mut self, addr: u64, data: u32) {
         let e_addr = addr & 0x3f_fffc;
 
         if e_addr < PLIC_PENDING_BASE {

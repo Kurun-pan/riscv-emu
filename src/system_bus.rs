@@ -1,8 +1,10 @@
 use crate::tty::Tty;
 use crate::dram::Dram;
 use crate::peripherals::timer::Timer;
+use crate::peripherals::fu540_c000::clint::Clint;
 use crate::peripherals::uart::Uart;
 use crate::peripherals::intc::Intc;
+use crate::peripherals::fu540_c000::plic::Plic;
 
 pub const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 pub const TIMER_ADDRESS_END:   u64 = 0x0200_FFFF;
@@ -30,8 +32,8 @@ pub const DRAM_ADDRESS_START:  u64 = 0x8000_0000;
 pub struct SystemBus {
     clock: u64,
     pub dram: Dram,
-    timer: Timer,
-    intc: Intc,
+    timer: Box<dyn Timer>,
+    intc: Box<dyn Intc>,
     uart: Uart,
 }
 
@@ -40,8 +42,8 @@ impl SystemBus {
         Self {
             clock: 0,
             dram: Dram::new(),
-            timer: Timer::new(),
-            intc: Intc::new(),
+            timer: Box::new(Clint::new()),
+            intc: Box::new(Plic::new()),
             uart: Uart::new(tty),
         }
     }
