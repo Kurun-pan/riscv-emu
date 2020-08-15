@@ -1,12 +1,14 @@
 extern crate riscv_emu;
 
 use riscv_emu::emulator::Emulator;
-//use riscv_emu::system_bus::DRAM_BASE_ADDRESS;
+use riscv_emu::tty::Tty0;
 
 use std::path::PathBuf;
 
 fn main() {
-    let mut emu = Emulator::new();
+    let testmode = false;
+    let tty = Box::new(Tty0::new());
+    let mut emu = Emulator::new(tty, testmode);
 
     /*
     let data = vec![

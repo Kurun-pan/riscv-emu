@@ -1,3 +1,4 @@
+use crate::tty::Tty;
 use crate::dram::Dram;
 use crate::peripherals::timer::Timer;
 use crate::peripherals::uart::Uart;
@@ -35,13 +36,13 @@ pub struct SystemBus {
 }
 
 impl SystemBus {
-    pub fn new() -> Self {
+    pub fn new(tty: Box<dyn Tty>) -> Self {
         Self {
             clock: 0,
             dram: Dram::new(),
             timer: Timer::new(),
             intc: Intc::new(),
-            uart: Uart::new(),
+            uart: Uart::new(tty),
         }
     }
 

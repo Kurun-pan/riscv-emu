@@ -1,5 +1,6 @@
+use crate::tty::Tty;
 use crate::cpu::cpu_csr::*;
-use crate::cpu::cpu_instruction::{Opecode, OPECODES, unsigned};
+use crate::cpu::cpu_instruction::{Instruction, Opecode, OPECODES, unsigned};
 use crate::cpu::cpu_instruction_comp::*;
 use crate::cpu::trap::*;
 use crate::mmu::Mmu;
@@ -28,10 +29,11 @@ pub struct Cpu {
     pub f: [f64; 32],
     pub csr: Csr,
     pub mmu: Mmu,
+    testmode: bool,
 }
 
 impl Cpu {
-    pub fn new() -> Self {
+    pub fn new(tty: Box<dyn Tty>, testmode: bool) -> Self {
         let cpu = Cpu {
             pc: 0,
             wfi: false,
@@ -40,7 +42,8 @@ impl Cpu {
             x: [0; 32],
             f: [0.0; 32],
             csr: Csr::new(),
-            mmu: Mmu::new(Xlen::X64),
+            mmu: Mmu::new(Xlen::X64, tty),
+            testmode: testmode,
         };
         cpu
     }
@@ -79,7 +82,6 @@ impl Cpu {
         // run peripherals.        
         let bus = self.mmu.get_bus();
         let irqs = bus.tick();
-
         // set external interrupts to CSR register.
         if irqs[Privilege::Machine as usize] {
             self.csr.read_modify_write_direct(CSR_MIP, 0x800, 0);
@@ -105,14 +107,18 @@ impl Cpu {
             Err(e) => return Err(e),
         };
 
-        // instruction decode.
-        {
-            let mut s = String::new();
-            s += &format!(" [PC]: {:016x}", instruction_addr);
-            s += &format!(" [P]: {:?} |", self.privilege);
-            s += &format!("    {:08x}    ", word);
-            print!("{}", s);
+        let mut debug_message = String::new();
+        if self.testmode {
+            debug_message += &format!(" [PC]: {:016x}", instruction_addr);
+            debug_message += &format!(" [P]: {:?} |", self.privilege);
+            debug_message += &format!("    {:08x}    ", word);
+            match self.pc.wrapping_sub(instruction_addr) {
+                0x2 => debug_message += "(C)",
+                _ => debug_message += "   "
+            };
         }
+
+        // instruction decode.
         let instruction = match self.decode(word) {
             Ok(opecode) => match (opecode.operation)(self, instruction_addr, word) {
                 Ok(_instruction) => _instruction,
@@ -122,15 +128,20 @@ impl Cpu {
         };
 
         // instruction execute.
-        println!(
-            "{}",
-            (instruction.disassemble)(self, instruction.mnemonic, word)
-        );
+        if self.testmode {
+            let dis = (instruction.disassemble)(self, instruction.mnemonic, word);
+            debug_message += &format!("{}", dis);
+        }
+
         match (instruction.operation)(self, instruction_addr, word) {
             Err(e) => return Err(e),
             _ => {}
         }
         self.x[0] = 0; // hardwired zero
+
+        if self.testmode {
+            println!("{}", debug_message);
+        }
 
         return Ok(());
     }
@@ -144,13 +155,11 @@ impl Cpu {
         match (fetch_word & 0x3) == 0x3 {
             // 32bit instruction
             true => {
-                print!("   ");
                 self.pc = self.pc.wrapping_add(4);
                 return Ok(fetch_word);
             }
             // 16bit compressed instruction
             false => {
-                print!("(C)");
                 self.pc = self.pc.wrapping_add(2);
                 return match instruction_decompress(self, self.pc.wrapping_sub(2), fetch_word) {
                     Ok(word) => Ok(word),

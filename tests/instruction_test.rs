@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::path::Path;
 
 use riscv_emu::emulator::Emulator;
+use riscv_emu::tty::TtyDummy;
 
 fn _read_file(filename: &Path) -> io::Result<Vec<u8>> {
     let mut file = match File::open(&filename) {
@@ -28,7 +29,9 @@ fn instruction_test(filename: &'static str) -> u32 {
     //let data = read_file(root.as_path()).unwrap();
 
     // run test program.
-    let mut emu = Emulator::new();
+    let testmode = true;
+    let tty = Box::new(TtyDummy::new());
+    let mut emu = Emulator::new(tty, testmode);
     emu.load_program(root.as_path());
     let result = match emu.run() {
         Ok(ret) => ret,

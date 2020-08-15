@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use crate::tty::Tty;
 use crate::cpu::cpu::{Privilege, Xlen};
 use crate::cpu::trap::*;
 use crate::system_bus::SystemBus;
@@ -46,9 +46,9 @@ enum MemoryAccessType {
 }
 
 impl Mmu {
-    pub fn new(_xlen: Xlen) -> Self {
+    pub fn new(_xlen: Xlen, tty: Box<dyn Tty>) -> Self {
         Mmu {
-            bus: SystemBus::new(),
+            bus: SystemBus::new(tty),
             xlen: _xlen,
             ppn: 0,
             addressing_mode: AddressingMode::Bare,

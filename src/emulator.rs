@@ -1,18 +1,20 @@
+use std::path::Path;
+use crate::tty::Tty;
 use crate::cpu::cpu::{Cpu, Xlen};
 use crate::elf_loader::{EMachine, EiClass, ElfLoader, ShType};
 use crate::system_bus::DRAM_ADDRESS_START;
 
-use std::path::Path;
-
 pub struct Emulator {
-    pub cpu: Cpu,
+    cpu: Cpu,
+    testmode: bool,
     tohost: u64,
 }
 
 impl Emulator {
-    pub fn new() -> Emulator {
+    pub fn new(tty: Box<dyn Tty>, testmode: bool) -> Emulator {
         Self {
-            cpu: Cpu::new(),
+            cpu: Cpu::new(tty, testmode),
+            testmode: testmode,
             tohost: 0,
         }
     }
@@ -83,18 +85,20 @@ impl Emulator {
             }
         }
 
-        self.tohost = match loader.search_tohost(&progbits_sec_headers, &strtab_sec_headers) {
-            Some(addr) => addr,
-            None => 0
-        };
-        //println!(".tohost = {:x}", self.tohost);
+        if self.testmode {
+            self.tohost = match loader.search_tohost(&progbits_sec_headers, &strtab_sec_headers) {
+                Some(addr) => addr,
+                None => 0
+            };
+            println!(".tohost = {:x}", self.tohost);
+        }
     }
 
     pub fn run(&mut self) -> Result<u32, u32> {
         println!("Start RISC-V Emulator!");
         loop {
             self.cpu.tick();
-            if self.tohost != 0 {
+            if self.testmode && self.tohost != 0 {
                 match self.cpu.mmu.read32_direct(self.tohost) {
                     Ok(data) => match data {
                         0 => {},

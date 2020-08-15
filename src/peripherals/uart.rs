@@ -1,6 +1,8 @@
 // UART 16550
 // http://caro.su/msx/ocm_de1/16550.pdf
 
+use crate::tty::Tty;
+
 pub struct Uart {
     rhr: u8, // RO
     thr: u8, // WO
@@ -12,10 +14,12 @@ pub struct Uart {
     lsr: u8, // RO
     msr: u8, // RO
     spr: u8, // RW
+
+    tty: Box<dyn Tty>,
 }
 
 impl Uart {
-    pub fn new() -> Self {
+    pub fn new(tty_: Box<dyn Tty>) -> Self {
         Uart {
             rhr: 0,
             thr: 0,
@@ -27,22 +31,27 @@ impl Uart {
             lsr: 0x60,
             msr: 0,
             spr: 0,
+            tty: tty_,
         }
     }
 
     pub fn tick(&mut self) {
         // input
         if self.rhr == 0 {
-            // TODO: Implement here.
+            match self.tty.getchar() {
+                0 => {},
+                c => {
+                    self.rhr = c;
 
-            // assert Data Ready interrupt.
-            self.lsr |= 0x1;
+                    // assert Data Ready interrupt.
+                    self.lsr |= 0x1;
+                }
+            }
         }
 
         // output
         if self.thr != 0 {
-            // TODO: output data to a terminal.
-            println!("[UART] {:x}", self.thr);
+            self.tty.putchar(self.thr);
             self.thr = 0;
 
             // assert THR Empty interrupt.
