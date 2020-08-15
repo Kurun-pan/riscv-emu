@@ -44,13 +44,13 @@ impl Emulator {
 
         let elf_header = loader.get_elf_header();
         match elf_header.e_machine {
-            EMachine::EM_RISCV => {}
+            EMachine::RISCV => {}
             _ => panic!("{} is not program for RISC-V machine!", filename.display()),
         }
         self.cpu.set_pc(elf_header.e_entry);
         self.cpu.set_xlen(match elf_header.e_indent.ei_classs {
-            EiClass::ELFCLASS32 => Xlen::X32,
-            EiClass::ELFCLASS64 => Xlen::X64,
+            EiClass::Class32 => Xlen::X32,
+            EiClass::Class64 => Xlen::X64,
             _ => panic!("Unexpected class size: {:?}", elf_header.e_indent.ei_classs),
         });
 
@@ -60,9 +60,9 @@ impl Emulator {
         let mut strtab_sec_headers = vec![];
         for i in 0..sec_headers.len() {
             match sec_headers[i].sh_type {
-                ShType::SHT_PROGBITS => progbits_sec_headers.push(&sec_headers[i]),
-                ShType::SHT_SYSMTAB => symtab_sec_headers.push(&sec_headers[i]),
-                ShType::SHT_STRTAB => strtab_sec_headers.push(&sec_headers[i]),
+                ShType::Progbits => progbits_sec_headers.push(&sec_headers[i]),
+                ShType::Sysmtab => symtab_sec_headers.push(&sec_headers[i]),
+                ShType::Strtab => strtab_sec_headers.push(&sec_headers[i]),
                 _ => {}
             }
         }
