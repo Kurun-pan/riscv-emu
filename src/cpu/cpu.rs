@@ -183,6 +183,24 @@ impl Cpu {
         println!("  >> Exception: {:?} ({:?})", trap.exception, self.privilege);
         let exception_code = trap.exception as u64 as u8;
 
+        // update CSR/xSTATUS register.
+        match self.privilege {
+            Privilege::User => println!("TODO: SSTATUS spec is existing?"),
+            Privilege::Supervisor => {
+                let sstatus = self.csr.read_direct(CSR_SSTATUS);
+                let spie = ((sstatus >> 1) & 0x1) << 5;
+                let data = (sstatus & !0x122) | spie | (1 << 8);
+                self.csr.write_direct(CSR_SSTATUS, data);
+            },
+            Privilege::Hypervisor => panic!("TODO: HSTATUS spec is existing?"),
+            Privilege::Machine => {
+                let mstatus = self.csr.read_direct(CSR_MSTATUS);
+                let mpie = ((mstatus >> 3) & 0x1) << 7;
+                let data = (mstatus & !0x1888) | mpie | (3 << 11);
+                self.csr.write_direct(CSR_MSTATUS, data);
+            },
+        };
+
         // change privilege.
         {
             let medeleg = self.csr.read_direct(CSR_MEDELEG);
@@ -241,24 +259,6 @@ impl Cpu {
                 Privilege::Machine => CSR_MTVAL,
             }, trap.value);
         }
-
-        // update CSR/xSTATUS register.
-        match self.privilege {
-            Privilege::User => panic!("TODO: SSTATUS spec is existing?"),
-            Privilege::Supervisor => {
-                let sstatus = self.csr.read_direct(CSR_SSTATUS);
-                let spie = ((sstatus >> 1) & 0x1) << 5;
-                let data = (sstatus & !0x122) | spie | (1 << 8);
-                self.csr.write_direct(CSR_SSTATUS, data);
-            },
-            Privilege::Hypervisor => panic!("TODO: HSTATUS spec is existing?"),
-            Privilege::Machine => {
-                let mstatus = self.csr.read_direct(CSR_MSTATUS);
-                let mpie = ((mstatus >> 3) & 0x1) << 7;
-                let data = (mstatus & !0x1888) | mpie | (3 << 11);
-                self.csr.write_direct(CSR_MSTATUS, data);
-            },
-        };
     }
 
     fn check_interrupt(&mut self) -> Option<Interrupt> {
