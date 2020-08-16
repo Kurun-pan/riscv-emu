@@ -463,7 +463,7 @@ impl Mmu {
         }
 
         // 5. check last entry or not.
-        if !(pte_d.r == 1 && pte_d.x == 1) {
+        if pte_d.r == 0 && pte_d.x == 0 {
             return match level {
                 0 => Err(()),
                 _ => self.page_waking(v_addr, level - 1, pte_d.ppn, vpns, access_type),
