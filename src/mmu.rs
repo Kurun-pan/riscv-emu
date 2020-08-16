@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use crate::tty::Tty;
 use crate::cpu::cpu::{Privilege, Xlen};
 use crate::cpu::trap::*;
 use crate::system_bus::SystemBus;
+use crate::tty::Tty;
+use std::collections::HashMap;
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -77,10 +77,10 @@ impl Mmu {
                 8 => AddressingMode::Sv39,
                 9 => AddressingMode::Sv48,
                 n => panic!(" {:x} is not implemented yet.", n),
-            }
+            },
             Xlen::X32 => match data & 0x80000000 {
                 0 => AddressingMode::Bare,
-                _ => AddressingMode::Sv32
+                _ => AddressingMode::Sv32,
             },
         };
         //println!("update mode => {:?}", self.addressing_mode);
@@ -252,9 +252,42 @@ impl Mmu {
     }
 
     pub fn fetch32(&mut self, v_addr: u64) -> Result<u32, Trap> {
+        // sometimes access to unaliggned acccess.
+        match v_addr & 0xffff {
+            0 | 4 | 8 | 0xc => {
+                let ev_addr = self.to_effective_address(v_addr);
+                match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
+                    Ok(p_addr) => match self.bus.read32(p_addr) {
+                        Ok(data) => Ok(data),
+                        Err(()) => Err(Trap {
+                            exception: Exception::InstructionPageFault,
+                            value: ev_addr,
+                        }),
+                    },
+                    Err(()) => Err(Trap {
+                        exception: Exception::LoadPageFault,
+                        value: ev_addr,
+                    }),
+                }
+            }
+            _ => {
+                let mut data = 0 as u32;
+                for i in 0..4 {
+                    match self.fetch8(v_addr.wrapping_add(i)) {
+                        Ok(d) => data |= (d as u32) << (i * 8),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Ok(data)
+            }
+        }
+    }
+
+    /// Instruction fetch for compressed instruction.
+    pub fn fetch16(&mut self, v_addr: u64) -> Result<u16, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
-            Ok(p_addr) => match self.bus.read32(p_addr) {
+            Ok(p_addr) => match self.bus.read16(p_addr) {
                 Ok(data) => Ok(data),
                 Err(()) => Err(Trap {
                     exception: Exception::InstructionPageFault,
@@ -268,11 +301,12 @@ impl Mmu {
         }
     }
 
-    // Instruction fetch for compressed instruction.
-    pub fn fetch16(&mut self, v_addr: u64) -> Result<u16, Trap> {
+    /// Instruction fetch for unaliggned acccess when virtual addressing mode.
+    /// For passing riscv-tests (rv32uc-v-rvc and rv64uc-v-rvc)
+    fn fetch8(&mut self, v_addr: u64) -> Result<u8, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
-            Ok(p_addr) => match self.bus.read16(p_addr) {
+            Ok(p_addr) => match self.bus.read8(p_addr) {
                 Ok(data) => Ok(data),
                 Err(()) => Err(Trap {
                     exception: Exception::InstructionPageFault,
@@ -292,7 +326,6 @@ impl Mmu {
         access_type: MemoryAccessType,
     ) -> Result<u64, ()> {
         //println!("AddressingMode = {:?}", self.addressing_mode);
-
         match self.addressing_mode {
             AddressingMode::Bare => Ok(v_addr),
             AddressingMode::Sv32 => match self.privilege {
@@ -431,7 +464,6 @@ impl Mmu {
                 _ => panic!(),
             },
         };
-        //print!("p_addr = {:x}", p_addr);
         Ok(p_addr)
     }
 
