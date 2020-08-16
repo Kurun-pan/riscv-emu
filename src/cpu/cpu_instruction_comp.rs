@@ -801,7 +801,7 @@ fn c_ldsp(word: u16) -> Result<u32, ()> {
             let uimm = (((word >> 7) & 0x20) |
             ((word >> 2) & 0x18) |
             ((word << 4) & 0x1c0)) as u32;
-        
+
             // ld rd,offset(rs1)
             let op = 0x3 as u32;
             let rd = rd_ << 7;
