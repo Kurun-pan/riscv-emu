@@ -22,34 +22,29 @@ impl Dram {
         self.dram.splice(..data.len(), data.iter().cloned());
     }
 
-    pub fn write8(&mut self, addr: u64, val: u8) {
-        self.dram[addr as usize] = val;
+    pub fn write8(&mut self, addr: u64, data: u8) {
+        self.dram[addr as usize] = data;
     }
 
-    pub fn write16(&mut self, addr: u64, val: u16) {
-        let index = addr  as usize;
-        self.dram[index]     = (val & 0xff) as u8;
-        self.dram[index + 1] = ((val >> 8) & 0xff) as u8;
-    }
-
-    pub fn write32(&mut self, addr: u64, val: u32) {
+    pub fn write16(&mut self, addr: u64, data: u16) {
         let index = addr as usize;
-        self.dram[index]     = (val & 0xff) as u8;
-        self.dram[index + 1] = ((val >>  8) & 0xff) as u8;
-        self.dram[index + 2] = ((val >> 16) & 0xff) as u8;
-        self.dram[index + 3] = ((val >> 24) & 0xff) as u8;
+        for i in 0..2 {
+            self.dram[index + i] = ((data >> (i * 8)) & 0xff) as u8;
+        }
     }
 
-    pub fn write64(&mut self, addr: u64, val: u64) {
+    pub fn write32(&mut self, addr: u64, data: u32) {
         let index = addr as usize;
-        self.dram[index]     = (val & 0xff) as u8;
-        self.dram[index + 1] = ((val >>  8) & 0xff) as u8;
-        self.dram[index + 2] = ((val >> 16) & 0xff) as u8;
-        self.dram[index + 3] = ((val >> 24) & 0xff) as u8;
-        self.dram[index + 4] = ((val >> 32) & 0xff) as u8;
-        self.dram[index + 5] = ((val >> 40) & 0xff) as u8;
-        self.dram[index + 6] = ((val >> 48) & 0xff) as u8;
-        self.dram[index + 7] = ((val >> 56) & 0xff) as u8;
+        for i in 0..4 {
+            self.dram[index + i] = ((data >> (i * 8)) & 0xff) as u8;
+        }
+    }
+
+    pub fn write64(&mut self, addr: u64, data: u64) {
+        let index = addr as usize;
+        for i in 0..8 {
+            self.dram[index + i] = ((data >> (i * 8)) & 0xff) as u8;
+        }
     }
 
     pub fn read8(&self, addr: u64) -> u8 {
@@ -59,26 +54,28 @@ impl Dram {
 
     pub fn read16(&self, addr: u64) -> u16 {
         let index = addr as usize;
-        return (self.dram[index] as u16) | ((self.dram[index + 1] as u16) << 8);
+        let mut data = 0 as u16;
+        for i in 0..2 {
+            data |= (self.dram[index + i] as u16) << (i * 8);
+        }
+        data
     }
 
     pub fn read32(&self, addr: u64) -> u32 {
         let index = addr as usize;
-        return (self.dram[index] as u32)
-            | ((self.dram[index + 1] as u32) << 8)
-            | ((self.dram[index + 2] as u32) << 16)
-            | ((self.dram[index + 3] as u32) << 24);
+        let mut data = 0 as u32;
+        for i in 0..4 {
+            data |= (self.dram[index + i] as u32) << (i * 8);
+        }
+        data
     }
 
     pub fn read64(&self, addr: u64) -> u64 {
         let index = addr as usize;
-        return (self.dram[index] as u64)
-            | ((self.dram[index + 1] as u64) << 8)
-            | ((self.dram[index + 2] as u64) << 16)
-            | ((self.dram[index + 3] as u64) << 24)
-            | ((self.dram[index + 4] as u64) << 32)
-            | ((self.dram[index + 5] as u64) << 40)
-            | ((self.dram[index + 6] as u64) << 48)
-            | ((self.dram[index + 7] as u64) << 56);
+        let mut data = 0 as u64;
+        for i in 0..8 {
+            data |= (self.dram[index + i] as u64) << (i * 8);
+        }
+        data
     }
 }
