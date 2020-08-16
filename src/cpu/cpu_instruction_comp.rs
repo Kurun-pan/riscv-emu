@@ -426,9 +426,9 @@ fn c_sd(word: u16) -> Result<u32, ()> {
     let op = 0x23 as u32;
     let rs2 = (rs2_ + 8) << 20;
     let rs1 = (rs1_ + 8) << 15;
+    let offset_h = ((uimm >> 5) & 0x7f) << 25;
     let offset_l = (uimm & 0x1f) << 7;
-    let offset_h = ((uimm >> 5) & 0x7f) << 20;
-    Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
+     Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
 }
 
 /// [c.nop]
