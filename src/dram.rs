@@ -2,19 +2,16 @@ pub const MAX_DRAM_SIZE: u64 = 1024 * 1024 * 128;
 
 pub struct Dram {
     pub dram: Vec<u8>,
-    code_size: u64,
 }
 
 impl Dram {
     pub fn new() -> Self {
         Self {
             dram: vec![0; MAX_DRAM_SIZE as usize],
-            code_size: 0,
         }
     }
 
     pub fn initialize(&mut self, data: Vec<u8>) {
-        self.code_size = data.len() as u64;
         self.dram.splice(..data.len(), data.iter().cloned());
     }
 
