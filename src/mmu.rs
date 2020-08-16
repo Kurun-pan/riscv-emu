@@ -122,36 +122,68 @@ impl Mmu {
     }
 
     pub fn read16(&mut self, v_addr: u64) -> Result<u16, Trap> {
-        let ev_addr = self.to_effective_address(v_addr);
-        match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
-            Ok(p_addr) => match self.bus.read16(p_addr) {
-                Ok(data) => Ok(data),
-                Err(()) => Err(Trap {
-                    exception: Exception::LoadPageFault,
-                    value: ev_addr,
-                }),
+        // sometimes access to unaliggned acccess.
+        // If it exceeds the page size, it is necessary to refer to another page table.
+        match v_addr & (PAGE_SIZE - 1) <= (PAGE_SIZE - 2) {
+            true => {
+                let ev_addr = self.to_effective_address(v_addr);
+                match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
+                    Ok(p_addr) => match self.bus.read16(p_addr) {
+                        Ok(data) => Ok(data),
+                        Err(()) => Err(Trap {
+                            exception: Exception::LoadPageFault,
+                            value: ev_addr,
+                        }),
+                    },
+                    Err(()) => Err(Trap {
+                        exception: Exception::LoadPageFault,
+                        value: ev_addr,
+                    }),
+                }
             },
-            Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
-                value: ev_addr,
-            }),
+            _ => {
+                let mut data = 0 as u16;
+                for i in 0..2 {
+                    match self.read8(v_addr.wrapping_add(i)) {
+                        Ok(d) => data |= (d as u16) << (i * 8),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Ok(data)
+            }
         }
     }
 
     pub fn read32(&mut self, v_addr: u64) -> Result<u32, Trap> {
-        let ev_addr = self.to_effective_address(v_addr);
-        match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
-            Ok(p_addr) => match self.bus.read32(p_addr) {
-                Ok(data) => Ok(data),
-                Err(()) => Err(Trap {
-                    exception: Exception::LoadPageFault,
-                    value: ev_addr,
-                }),
+        // sometimes access to unaliggned acccess.
+        // If it exceeds the page size, it is necessary to refer to another page table.
+        match v_addr & (PAGE_SIZE - 1) <= (PAGE_SIZE - 4) {
+            true => {
+                let ev_addr = self.to_effective_address(v_addr);
+                match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
+                    Ok(p_addr) => match self.bus.read32(p_addr) {
+                        Ok(data) => Ok(data),
+                        Err(()) => Err(Trap {
+                            exception: Exception::LoadPageFault,
+                            value: ev_addr,
+                        }),
+                    },
+                    Err(()) => Err(Trap {
+                        exception: Exception::LoadPageFault,
+                        value: ev_addr,
+                    }),
+                }
             },
-            Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
-                value: ev_addr,
-            }),
+            _ => {
+                let mut data = 0 as u32;
+                for i in 0..4 {
+                    match self.read8(v_addr.wrapping_add(i)) {
+                        Ok(d) => data |= (d as u32) << (i * 8),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Ok(data)
+            }
         }
     }
 
@@ -167,19 +199,35 @@ impl Mmu {
     }
 
     pub fn read64(&mut self, v_addr: u64) -> Result<u64, Trap> {
-        let ev_addr = self.to_effective_address(v_addr);
-        match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
-            Ok(p_addr) => match self.bus.read64(p_addr) {
-                Ok(data) => Ok(data),
-                Err(()) => Err(Trap {
-                    exception: Exception::LoadPageFault,
-                    value: ev_addr,
-                }),
+        // sometimes access to unaliggned acccess.
+        // If it exceeds the page size, it is necessary to refer to another page table.
+        match v_addr & (PAGE_SIZE - 1) <= (PAGE_SIZE - 8) {
+            true => {
+                let ev_addr = self.to_effective_address(v_addr);
+                match self.to_physical_address(ev_addr, MemoryAccessType::Read) {
+                    Ok(p_addr) => match self.bus.read64(p_addr) {
+                        Ok(data) => Ok(data),
+                        Err(()) => Err(Trap {
+                            exception: Exception::LoadPageFault,
+                            value: ev_addr,
+                        }),
+                    },
+                    Err(()) => Err(Trap {
+                        exception: Exception::LoadPageFault,
+                        value: ev_addr,
+                    }),
+                }
             },
-            Err(()) => Err(Trap {
-                exception: Exception::LoadPageFault,
-                value: ev_addr,
-            }),
+            _ => {
+                let mut data = 0 as u64;
+                for i in 0..8 {
+                    match self.read8(v_addr.wrapping_add(i)) {
+                        Ok(d) => data |= (d as u64) << (i * 8),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Ok(data)
+            }
         }
     }
 
@@ -200,61 +248,107 @@ impl Mmu {
         }
     }
 
-    pub fn write16(&mut self, v_addr: u64, val: u16) -> Result<(), Trap> {
-        let ev_addr = self.to_effective_address(v_addr);
-        match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
-            Ok(p_addr) => match self.bus.write16(p_addr, val) {
-                Ok(()) => Ok(()),
-                Err(()) => Err(Trap {
-                    exception: Exception::StorePageFault,
-                    value: ev_addr,
-                }),
+    pub fn write16(&mut self, v_addr: u64, data: u16) -> Result<(), Trap> {
+        // sometimes access to unaliggned acccess.
+        // If it exceeds the page size, it is necessary to refer to another page table.
+        match v_addr & (PAGE_SIZE - 1) <= (PAGE_SIZE - 2) {
+            true => {
+                let ev_addr = self.to_effective_address(v_addr);
+                match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
+                    Ok(p_addr) => match self.bus.write16(p_addr, data) {
+                        Ok(()) => Ok(()),
+                        Err(()) => Err(Trap {
+                            exception: Exception::StorePageFault,
+                            value: ev_addr,
+                        }),
+                    },
+                    Err(()) => Err(Trap {
+                        exception: Exception::StorePageFault,
+                        value: ev_addr,
+                    }),
+                }
             },
-            Err(()) => Err(Trap {
-                exception: Exception::StorePageFault,
-                value: ev_addr,
-            }),
+            _ => {
+                for i in 0..2 {
+                    match self.write8(v_addr.wrapping_add(i), ((data >> (i * 8)) & 0xff) as u8) {
+                        Err(e) => return Err(e),
+                        _ => {},
+                    }
+                }
+                Ok(())
+            }
         }
     }
 
-    pub fn write32(&mut self, v_addr: u64, val: u32) -> Result<(), Trap> {
-        let ev_addr = self.to_effective_address(v_addr);
-        match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
-            Ok(p_addr) => match self.bus.write32(p_addr, val) {
-                Ok(()) => Ok(()),
-                Err(()) => Err(Trap {
-                    exception: Exception::StorePageFault,
-                    value: ev_addr,
-                }),
+    pub fn write32(&mut self, v_addr: u64, data: u32) -> Result<(), Trap> {
+        // sometimes access to unaliggned acccess.
+        // If it exceeds the page size, it is necessary to refer to another page table.
+        match v_addr & (PAGE_SIZE - 1) <= (PAGE_SIZE - 4) {
+            true => {
+                let ev_addr = self.to_effective_address(v_addr);
+                match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
+                    Ok(p_addr) => match self.bus.write32(p_addr, data) {
+                        Ok(()) => Ok(()),
+                        Err(()) => Err(Trap {
+                            exception: Exception::StorePageFault,
+                            value: ev_addr,
+                        }),
+                    },
+                    Err(()) => Err(Trap {
+                        exception: Exception::StorePageFault,
+                        value: ev_addr,
+                    }),
+                }
             },
-            Err(()) => Err(Trap {
-                exception: Exception::StorePageFault,
-                value: ev_addr,
-            }),
+            _ => {
+                for i in 0..4 {
+                    match self.write8(v_addr.wrapping_add(i), ((data >> (i * 8)) & 0xff) as u8) {
+                        Err(e) => return Err(e),
+                        _ => {},
+                    }
+                }
+                Ok(())
+            },
         }
     }
 
-    pub fn write64(&mut self, v_addr: u64, val: u64) -> Result<(), Trap> {
-        let ev_addr = self.to_effective_address(v_addr);
-        match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
-            Ok(p_addr) => match self.bus.write64(p_addr, val) {
-                Ok(()) => Ok(()),
-                Err(()) => Err(Trap {
-                    exception: Exception::StorePageFault,
-                    value: ev_addr,
-                }),
+    pub fn write64(&mut self, v_addr: u64, data: u64) -> Result<(), Trap> {
+        // sometimes access to unaliggned acccess.
+        // If it exceeds the page size, it is necessary to refer to another page table.
+        match v_addr & (PAGE_SIZE - 1) <= (PAGE_SIZE - 8) {
+            true => {
+                let ev_addr = self.to_effective_address(v_addr);
+                match self.to_physical_address(ev_addr, MemoryAccessType::Write) {
+                    Ok(p_addr) => match self.bus.write64(p_addr, data) {
+                        Ok(()) => Ok(()),
+                        Err(()) => Err(Trap {
+                            exception: Exception::StorePageFault,
+                            value: ev_addr,
+                        }),
+                    },
+                    Err(()) => Err(Trap {
+                        exception: Exception::StorePageFault,
+                        value: ev_addr,
+                    }),
+                }
             },
-            Err(()) => Err(Trap {
-                exception: Exception::StorePageFault,
-                value: ev_addr,
-            }),
+            _ => {
+                for i in 0..8 {
+                    match self.write8(v_addr.wrapping_add(i), ((data >> (i * 8)) & 0xff) as u8) {
+                        Err(e) => return Err(e),
+                        _ => {},
+                    }
+                }
+                Ok(())
+            }
         }
     }
 
     pub fn fetch32(&mut self, v_addr: u64) -> Result<u32, Trap> {
         // sometimes access to unaliggned acccess.
-        match v_addr & 0xffff {
-            0 | 4 | 8 | 0xc => {
+        // If it exceeds the page size, it is necessary to refer to another page table.
+        match v_addr & (PAGE_SIZE - 1) <= (PAGE_SIZE - 4) {
+            true => {
                 let ev_addr = self.to_effective_address(v_addr);
                 match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
                     Ok(p_addr) => match self.bus.read32(p_addr) {
@@ -283,26 +377,7 @@ impl Mmu {
         }
     }
 
-    /// Instruction fetch for compressed instruction.
-    pub fn fetch16(&mut self, v_addr: u64) -> Result<u16, Trap> {
-        let ev_addr = self.to_effective_address(v_addr);
-        match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
-            Ok(p_addr) => match self.bus.read16(p_addr) {
-                Ok(data) => Ok(data),
-                Err(()) => Err(Trap {
-                    exception: Exception::InstructionPageFault,
-                    value: ev_addr,
-                }),
-            },
-            Err(()) => Err(Trap {
-                exception: Exception::InstructionPageFault,
-                value: ev_addr,
-            }),
-        }
-    }
-
     /// Instruction fetch for unaliggned acccess when virtual addressing mode.
-    /// For passing riscv-tests (rv32uc-v-rvc and rv64uc-v-rvc)
     fn fetch8(&mut self, v_addr: u64) -> Result<u8, Trap> {
         let ev_addr = self.to_effective_address(v_addr);
         match self.to_physical_address(ev_addr, MemoryAccessType::Fetch) {
