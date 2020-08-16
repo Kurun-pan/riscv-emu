@@ -1,13 +1,15 @@
 extern crate riscv_emu;
 
 use riscv_emu::emulator::Emulator;
-use riscv_emu::tty::Tty0;
+use riscv_emu::tty::*;
 
 use std::path::PathBuf;
 
 fn main() {
     let testmode = false;
     let tty = Box::new(Tty0::new());
+    //let testmode = true;
+    //let tty = Box::new(TtyDummy::new());
     let mut emu = Emulator::new(tty, testmode);
 
     /*
@@ -19,12 +21,23 @@ fn main() {
     emu.run();
     */
 
-    let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    //root.push("tests/bin/rv64uc-v-rvc");
-    root.push("artifacts/xv6/kernel");
+    // download user program to main mermoy.
+    {
+        let mut kernel = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        kernel.push("artifacts/xv6/kernel");
+        //kernel.push("artifacts/nuttx/nuttx");
+        emu.load_program(kernel.as_path());
+    }
 
-    // run test program.
-    emu.load_program(root.as_path());
+    // download disk image (filesystem).
+    /*
+    {
+        let mut fs = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        fs.push("artifacts/xv6/fs.img");
+        emu.load_disk_data(fs.as_path());
+    }*/
+
+    // run
     let result = match emu.run() {
         Ok(ret) => ret,
         Err(ret) => ret,
