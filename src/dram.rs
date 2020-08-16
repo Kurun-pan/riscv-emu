@@ -13,10 +13,6 @@ impl Dram {
         }
     }
 
-    pub fn get_size(&self) -> u64 {
-        self.code_size
-    }
-
     pub fn initialize(&mut self, data: Vec<u8>) {
         self.code_size = data.len() as u64;
         self.dram.splice(..data.len(), data.iter().cloned());
