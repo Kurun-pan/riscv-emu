@@ -97,6 +97,50 @@ pub const CSR_MUCONTEREN: u16 = 0x310;
 pub const CSR_MSCONTEREN: u16 = 0x311;
 pub const CSR_MHCONTEREN: u16 = 0x312;
 
+// register bit files
+pub const CSR_STATUS_UIE: u64  = 0x00000001;
+pub const CSR_STATUS_SIE: u64  = 0x00000002;
+pub const CSR_STATUS_HIE: u64  = 0x00000004;
+pub const CSR_STATUS_MIE: u64  = 0x00000008;
+pub const CSR_STATUS_UPIE: u64 = 0x00000010;
+pub const CSR_STATUS_SPIE: u64 = 0x00000020;
+pub const CSR_STATUS_HPIE: u64 = 0x00000040;
+pub const CSR_STATUS_MPIE: u64 = 0x00000080;
+pub const CSR_STATUS_SPP: u64  = 0x00000100;
+pub const CSR_STATUS_HPP: u64  = 0x00000600;
+pub const CSR_STATUS_MPP: u64  = 0x00001800;
+pub const CSR_STATUS_FS: u64   = 0x00006000;
+pub const CSR_STATUS_XS: u64   = 0x00018000;
+pub const CSR_STATUS_MPRV: u64 = 0x00020000;
+pub const CSR_STATUS_PUM: u64  = 0x00040000;
+pub const CSR_STATUS_MXR: u64  = 0x00080000;
+
+pub const CSR_IP_USIP: u64     = 0x00000001;
+pub const CSR_IP_SSIP: u64     = 0x00000002;
+pub const CSR_IP_HSIP: u64     = 0x00000004;
+pub const CSR_IP_MSIP: u64     = 0x00000008;
+pub const CSR_IP_UTIP: u64     = 0x00000010;
+pub const CSR_IP_STIP: u64     = 0x00000020;
+pub const CSR_IP_HTIP: u64     = 0x00000040;
+pub const CSR_IP_MTIP: u64     = 0x00000080;
+pub const CSR_IP_UEIP: u64     = 0x00000100;
+pub const CSR_IP_SEIP: u64     = 0x00000200;
+pub const CSR_IP_HEIP: u64     = 0x00000400;
+pub const CSR_IP_MEIP: u64     = 0x00000800;
+
+pub const CSR_IE_USIE: u64     = 0x00000001;
+pub const CSR_IE_SSIE: u64     = 0x00000002;
+pub const CSR_IE_HSIE: u64     = 0x00000004;
+pub const CSR_IE_MSIE: u64     = 0x00000008;
+pub const CSR_IE_UTIE: u64     = 0x00000010;
+pub const CSR_IE_STIE: u64     = 0x00000020;
+pub const CSR_IE_HTIE: u64     = 0x00000040;
+pub const CSR_IE_MTIE: u64     = 0x00000080;
+pub const CSR_IE_UEIE: u64     = 0x00000100;
+pub const CSR_IE_SEIE: u64     = 0x00000200;
+pub const CSR_IE_HEIE: u64     = 0x00000400;
+pub const CSR_IE_MEIE: u64     = 0x00000800;
+
 pub struct Csr {
     csr: [u64; 4096],
 }
@@ -125,7 +169,41 @@ impl Csr {
     }
 
     pub fn read_direct(&mut self, addr: u16) -> u64 {
-        self.csr[addr as usize]
+        match addr {
+            // Restricted views of the mstatus register appear as the hstatus and
+            // sstatus registers in the H and S privilege-level ISAs respectively.
+            CSR_HSTATUS => panic!("TODO: HSTATUS"),
+            CSR_SSTATUS => {
+                let mask = CSR_STATUS_PUM | CSR_STATUS_XS | CSR_STATUS_FS | CSR_STATUS_SPP |
+                                CSR_STATUS_SPIE | CSR_STATUS_UPIE | CSR_STATUS_SIE | CSR_STATUS_UIE;
+                self.csr[CSR_MSTATUS as usize] & mask
+            },
+
+            // Restricted views of the mip and mie registers appear as the hip/hie,
+            // sip/sie, and uip/uie registers in H-mode, S-mode, and U-mode respectively.            
+            CSR_SIP => {
+                let mask = CSR_IP_SEIP | CSR_IP_UEIP | CSR_IP_STIP |
+                                CSR_IP_UTIP | CSR_IP_SSIP | CSR_IP_USIP;
+                self.csr[CSR_MIP as usize] & mask
+            },
+            CSR_SIE => {
+                let mask = CSR_IE_SEIE | CSR_IE_UEIE | CSR_IE_STIE |
+                                CSR_IE_UTIE | CSR_IE_SSIE | CSR_IE_USIE;
+                self.csr[CSR_MIE as usize] & mask
+            },
+
+            // timer
+            CSR_MCYCLE | CSR_MTIME | CSR_MINSTRET | CSR_MCYCLEH |
+            CSR_MTIMEH | CSR_MINSTRETH => panic!("TODO: CSR MTimer"),
+            CSR_HCYCLE | CSR_HTIME | CSR_HINSTRET | CSR_HCYCLEH |
+            CSR_HTIMEH | CSR_HINSTRETH => panic!("TODO: CSR HTimer"),
+            CSR_SCYCLE | CSR_STIME | CSR_SINSTRET | CSR_SCYCLEH |
+            CSR_STIMEH | CSR_SINSTRETH => panic!("TODO: CSR STimer"),            
+            CSR_CYCLE | CSR_TIME | CSR_INSTRET | CSR_CYCLEH |
+            CSR_TIMEH | CSR_INSTRETH => panic!("TODO: CSR Timer"),
+
+            _ => self.csr[addr as usize],
+        }
     }
 
     pub fn read_modify_write_direct(&mut self, addr: u16, smask: u64, cmask: u64) {
@@ -158,6 +236,40 @@ impl Csr {
     }
 
     pub fn write_direct(&mut self, addr: u16, data: u64) {
-        self.csr[addr as usize] = data;
+        match addr {
+            // Restricted views of the mstatus register appear as the hstatus and
+            // sstatus registers in the H and S privilege-level ISAs respectively.
+            CSR_HSTATUS => panic!("TODO: HSTATUS"),
+            CSR_SSTATUS => {
+                let mask = CSR_STATUS_PUM | CSR_STATUS_XS | CSR_STATUS_FS | CSR_STATUS_SPP |
+                                CSR_STATUS_SPIE | CSR_STATUS_UPIE | CSR_STATUS_SIE | CSR_STATUS_UIE;
+                self.csr[CSR_MSTATUS as usize] = (self.csr[CSR_MSTATUS as usize] & !mask) | (data & mask);
+            },
+
+            // Restricted views of the mip and mie registers appear as the hip/hie,
+            // sip/sie, and uip/uie registers in H-mode, S-mode, and U-mode respectively.            
+            CSR_SIP => {
+                let mask = CSR_IP_SEIP | CSR_IP_UEIP | CSR_IP_STIP |
+                                CSR_IP_UTIP | CSR_IP_SSIP | CSR_IP_USIP;
+                self.csr[CSR_MIP as usize] = (self.csr[CSR_MIP as usize] & !mask) | (data & mask);
+            },
+            CSR_SIE => {
+                let mask = CSR_IE_SEIE | CSR_IE_UEIE | CSR_IE_STIE |
+                                CSR_IE_UTIE | CSR_IE_SSIE | CSR_IE_USIE;
+                self.csr[CSR_MIE as usize] = (self.csr[CSR_MIE as usize] & !mask) | (data & mask);
+            },            
+
+            // timer
+            CSR_MCYCLE | CSR_MTIME | CSR_MINSTRET | CSR_MCYCLEH |
+            CSR_MTIMEH | CSR_MINSTRETH => panic!("TODO: CSR MTimer"),
+            CSR_HCYCLE | CSR_HTIME | CSR_HINSTRET | CSR_HCYCLEH |
+            CSR_HTIMEH | CSR_HINSTRETH => panic!("TODO: CSR HTimer"),
+            CSR_SCYCLE | CSR_STIME | CSR_SINSTRET | CSR_SCYCLEH |
+            CSR_STIMEH | CSR_SINSTRETH => panic!("TODO: CSR STimer"),            
+            CSR_CYCLE | CSR_TIME | CSR_INSTRET | CSR_CYCLEH |
+            CSR_TIMEH | CSR_INSTRETH => panic!("TODO: CSR Timer"),            
+
+            _ => self.csr[addr as usize] = data,
+        }
     }
 }
