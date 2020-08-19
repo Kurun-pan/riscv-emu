@@ -39,7 +39,7 @@ impl Uart {
         // input
         if self.rhr == 0 {
             match self.tty.getchar() {
-                0 => {},
+                0 => {}
                 c => {
                     self.rhr = c;
 
@@ -85,7 +85,7 @@ impl Uart {
             5 => self.lsr,
             6 => self.msr,
             7 => self.spr,
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
@@ -100,7 +100,7 @@ impl Uart {
             5 => self.lsr = data,
             6 => self.msr = data,
             7 => self.spr = data,
-            _ => panic!()
+            _ => panic!(),
         }
     }
 }
