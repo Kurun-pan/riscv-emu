@@ -39,7 +39,7 @@ impl Timer for Clint {
     }
 
     fn is_pending_timer_interrupt(&mut self, core: usize) -> bool {
-        self.mtimecmp[core] >= self.mtime
+        self.mtimecmp[core] != 0 && self.mtime >= self.mtimecmp[core]
     }
 
     fn read(&mut self, addr: u64) -> u32 {
