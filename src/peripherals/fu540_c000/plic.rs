@@ -96,12 +96,17 @@ impl Intc for Plic {
         let e_addr = addr & 0x3f_fffc;
 
         if e_addr < PLIC_PENDING_BASE {
-            return self.priority[(e_addr >> 2) as usize];
+            let idx = e_addr >> 2;
+            if idx < PLIC_INT_MAX as u64 {
+                return self.priority[idx as usize];
+            } else {
+                panic!("Read to reserved area: {:x}", addr);
+            }
         }
         if e_addr < PLIC_MENABLE_BASE {
             match e_addr {
                 0x1000 => return self.pending,
-                _ => panic!("Read to reserved area!!"),
+                _ => panic!("Read to reserved area: {:x}", addr),
             }
         }
         if e_addr <= PLIC_MENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
@@ -135,11 +140,16 @@ impl Intc for Plic {
         let e_addr = addr & 0x3f_fffc;
 
         if e_addr < PLIC_PENDING_BASE {
-            self.priority[(e_addr >> 2) as usize] = data;
+            let idx = e_addr >> 2;
+            if idx < PLIC_INT_MAX as u64 {
+                self.priority[idx as usize] = data;
+            } else {
+                panic!("Write to reserved area: {:x}", addr);
+            }
         } else if e_addr < PLIC_MENABLE_BASE {
             match e_addr {
                 0x1000 => self.pending = data,
-                _ => panic!("Read to reserved area!!"),
+                _ => panic!("Write to reserved area: {:x}", addr),
             }
         } else if e_addr <= PLIC_MENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
             let idx = ((e_addr - PLIC_MENABLE_BASE) / 0x100) as usize;
