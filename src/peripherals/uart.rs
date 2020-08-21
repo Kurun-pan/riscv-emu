@@ -3,12 +3,14 @@
 
 use crate::tty::Tty;
 
-const IER_DATA_READY: u8 = 0x01;
-const IER_THR_EMPTY: u8 = 0x02;
+const _IER_DATA_READY: u8 = 0x01;
+const _IER_THR_EMPTY: u8 = 0x02;
 
 const ISR_INTERRUPT_STATUS_NO_INTERRUPT: u8 = 0x01;
 const ISR_IDENTIFICATION_CODE_DATA_READY: u8 = 0x4;
 const ISR_IDENTIFICATION_CODE_THR_EMPTY: u8 = 0x2;
+
+const LCR_DIVISOR_LATCH_ENABLE: u8 = 0x80;
 
 const LSR_DATA_READY: u8 = 0x01;
 const LSR_THR_EMPTY: u8 = 0x20;
@@ -48,7 +50,7 @@ impl Uart {
             fcr: 0,
             lcr: 0,
             mcr: 0,
-            lsr: 0x60,
+            lsr: 0x20,
             msr: 0,
             spr: 0,
             tty: tty_,
@@ -62,9 +64,9 @@ impl Uart {
                 0 => {}
                 c => {
                     self.rhr = c;
-                    if (self.ier & IER_DATA_READY) > 0 {
+                    //if (self.ier & IER_DATA_READY) > 0 {
                         self.lsr |= LSR_DATA_READY;
-                    }
+                    //}
                 }
             }
         }
@@ -72,9 +74,9 @@ impl Uart {
         if self.thr != 0 {
             self.tty.putchar(self.thr);
             self.thr = 0;
-            if (self.ier & IER_THR_EMPTY) > 0 {
+            //if (self.ier & IER_THR_EMPTY) > 0 {
                 self.lsr |= LSR_THR_EMPTY;
-            }
+            //}
         }
     }
 
@@ -86,7 +88,9 @@ impl Uart {
                 self.lsr &= !LSR_DATA_READY;
                 rhr
             }
-            1 => self.ier,
+            1 => {
+                self.ier
+            }
             2 => self.isr,
             3 => self.lcr,
             4 => self.mcr,
@@ -100,10 +104,16 @@ impl Uart {
     pub fn write(&mut self, addr: u64, data: u8) {
         match addr & 0x7 {
             0 => {
-                self.thr = data;
-                self.lsr &= !LSR_THR_EMPTY;
+                if self.lcr & LCR_DIVISOR_LATCH_ENABLE == 0 {
+                    self.thr = data;
+                    self.lsr &= !LSR_THR_EMPTY;
+                }
             }
-            1 => self.ier = data,
+            1 => {
+                if self.lcr & LCR_DIVISOR_LATCH_ENABLE == 0 {
+                    self.ier = data
+                }
+            }
             2 => self.fcr = data,
             3 => self.lcr = data,
             4 => self.mcr = data,
