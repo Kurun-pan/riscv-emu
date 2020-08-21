@@ -56,7 +56,6 @@ impl Plic {
 
 impl Intc for Plic {
     fn tick(&mut self, core: usize, interrupts: Vec<usize>) -> Vec<bool> {
-        // TODO: support multi cores.
         let mut irq_m = 0;
         let mut max_priority_m = 0;
         let mut irq_s = 0;
@@ -94,7 +93,6 @@ impl Intc for Plic {
     /// aligned 32-bit memory accesses.
     fn read(&mut self, addr: u64) -> u32 {
         let e_addr = addr & 0x3f_fffc;
-
         if e_addr < PLIC_PENDING_BASE {
             let idx = e_addr >> 2;
             if idx < PLIC_INT_MAX as u64 {
@@ -108,37 +106,61 @@ impl Intc for Plic {
                 0x1000 => return self.pending,
                 _ => panic!("Read to reserved area: {:x}", addr),
             }
+        } else if e_addr < PLIC_MTHRESHOLD_BASE {
+            if e_addr & 0x80 == 0 {
+                if e_addr <= PLIC_MENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
+                    let idx = ((e_addr - PLIC_MENABLE_BASE) / 0x100) as usize;
+                    return self.menable[idx];
+                } else {
+                    panic!("Write to reserved area: {:x}", addr);
+                }
+            } else {
+                if e_addr <= PLIC_SENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
+                    let idx = ((e_addr - PLIC_SENABLE_BASE) / 0x100) as usize;
+                    return self.senable[idx];
+                } else {
+                    panic!("Write to reserved area: {:x}", addr);
+                }
+            }
+        } else {
+            if e_addr & 0x1000 == 0 {
+                if e_addr & 0x4 == 0 {
+                    if e_addr <= PLIC_MTHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_MTHRESHOLD_BASE) / 0x2000) as usize;
+                        return self.mthreshold[idx];
+                    } else {
+                        panic!("Write to reserved area: {:x}", addr);
+                    }
+                } else {
+                    if e_addr <= PLIC_MCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_MCLAIM_BASE) / 0x2000) as usize;
+                        return self.mclaim[idx];
+                    } else {
+                        panic!("Write to reserved area: {:x}", addr);
+                    }
+                }
+            } else {
+                if e_addr & 0x4 == 0 {
+                    if e_addr <= PLIC_STHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_STHRESHOLD_BASE) / 0x2000) as usize;
+                        return self.sthreshold[idx];
+                    } else {
+                        panic!("Write to reserved area: {:x}", addr);
+                    }
+                } else {
+                    if e_addr <= PLIC_SCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_SCLAIM_BASE) / 0x2000) as usize;
+                        return self.sclaim[idx];
+                    } else {
+                        panic!("Read to reserved area: {:x}", addr);
+                    }
+                }
+            }
         }
-        if e_addr <= PLIC_MENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_MENABLE_BASE) / 0x100) as usize;
-            return self.menable[idx];
-        }
-        if e_addr <= PLIC_SENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_SENABLE_BASE) / 0x100) as usize;
-            return self.senable[idx];
-        }
-        if e_addr <= PLIC_MTHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_MTHRESHOLD_BASE) / 0x2000) as usize;
-            return self.mthreshold[idx];
-        }
-        if e_addr <= PLIC_STHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_STHRESHOLD_BASE) / 0x2000) as usize;
-            return self.sthreshold[idx];
-        }
-        if e_addr <= PLIC_MCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_MCLAIM_BASE) / 0x2000) as usize;
-            return self.mclaim[idx];
-        }
-        if e_addr <= PLIC_SCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_SCLAIM_BASE) / 0x2000) as usize;
-            return self.sclaim[idx];
-        }
-        panic!("Read to reserved area: {:x}", addr);
     }
 
     fn write(&mut self, addr: u64, data: u32) {
         let e_addr = addr & 0x3f_fffc;
-
         if e_addr < PLIC_PENDING_BASE {
             let idx = e_addr >> 2;
             if idx < PLIC_INT_MAX as u64 {
@@ -151,32 +173,62 @@ impl Intc for Plic {
                 0x1000 => self.pending = data,
                 _ => panic!("Write to reserved area: {:x}", addr),
             }
-        } else if e_addr <= PLIC_MENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_MENABLE_BASE) / 0x100) as usize;
-            self.menable[idx] = data;
-        } else if e_addr <= PLIC_SENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_SENABLE_BASE) / 0x100) as usize;
-            self.senable[idx] = data;
-        } else if e_addr <= PLIC_MTHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_MTHRESHOLD_BASE) / 0x2000) as usize;
-            self.mthreshold[idx] = data;
-        } else if e_addr <= PLIC_STHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_STHRESHOLD_BASE) / 0x2000) as usize;
-            self.sthreshold[idx] = data;
-        } else if e_addr <= PLIC_MCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_MCLAIM_BASE) / 0x2000) as usize;
-            // clear the interrupt when it writes the same interrupt id to the register.
-            if self.mclaim[idx] == data {
-                self.mclaim[idx] = 0;
-            }
-        } else if e_addr <= PLIC_SCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
-            let idx = ((e_addr - PLIC_SCLAIM_BASE) / 0x2000) as usize;
-            // clear the interrupt when it writes the same interrupt id to the register.
-            if self.sclaim[idx] == data {
-                self.sclaim[idx] = 0;
+        } else if e_addr < PLIC_MTHRESHOLD_BASE {
+            if e_addr & 0x80 == 0 {
+                if e_addr <= PLIC_MENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
+                    let idx = ((e_addr - PLIC_MENABLE_BASE) / 0x100) as usize;
+                    self.menable[idx] = data;
+                } else {
+                    panic!("Write to reserved area: {:x}", addr);
+                }
+            } else {
+                if e_addr <= PLIC_SENABLE_BASE + 0x100 * PLIC_CORE_MAX as u64 {
+                    let idx = ((e_addr - PLIC_SENABLE_BASE) / 0x100) as usize;
+                    self.senable[idx] = data;
+                } else {
+                    panic!("Write to reserved area: {:x}", addr);
+                }
             }
         } else {
-            panic!("Write to reserved area: {:x}", addr);
+            if e_addr & 0x1000 == 0 {
+                if e_addr & 0x4 == 0 {
+                    if e_addr <= PLIC_MTHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_MTHRESHOLD_BASE) / 0x2000) as usize;
+                        self.mthreshold[idx] = data;
+                    } else {
+                        panic!("Write to reserved area: {:x}", addr);
+                    }
+                } else {
+                    if e_addr <= PLIC_MCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_MCLAIM_BASE) / 0x2000) as usize;
+                        // clear the interrupt when it writes the same interrupt id to the register.
+                        if self.mclaim[idx] == data {
+                            self.mclaim[idx] = 0;
+                        }
+                    } else {
+                        panic!("Write to reserved area: {:x}", addr);
+                    }
+                }
+            } else {
+                if e_addr & 0x4 == 0 {
+                    if e_addr <= PLIC_STHRESHOLD_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_STHRESHOLD_BASE) / 0x2000) as usize;
+                        self.sthreshold[idx] = data;
+                    } else {
+                        panic!("Write to reserved area: {:x}", addr);
+                    }
+                } else {
+                    if e_addr <= PLIC_SCLAIM_BASE + 0x2000 * PLIC_CORE_MAX as u64 {
+                        let idx = ((e_addr - PLIC_SCLAIM_BASE) / 0x2000) as usize;
+                        // clear the interrupt when it writes the same interrupt id to the register.
+                        if self.sclaim[idx] == data {
+                            self.sclaim[idx] = 0;
+                        }
+                    } else {
+                        panic!("Write to reserved area: {:x}", addr);
+                    }
+                }
+            }
         }
     }
 }
