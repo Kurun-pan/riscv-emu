@@ -1765,14 +1765,14 @@ fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// be cleared in the CSR, if that CSR bit is writable. Other bits in the CSR are unaffected.
 fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
-    let temp = cpu.x[o.rs1 as usize] as u64;
+    let t = cpu.x[o.rs1 as usize];
     if o.rd != 0 /* x0 */ {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
             Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
             Err(e) => return Err(e),
         };
     }
-    let data = cpu.x[o.rd as usize] as u64 | !temp;
+    let data = (cpu.x[o.rd as usize] & !t) as u64;
     match cpu.csr.write(o.csr, data, addr, &cpu.privilege) {
         Ok(need_update_mmu_addressing_mode) => {
             if need_update_mmu_addressing_mode {
@@ -1787,14 +1787,14 @@ fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// [csrrci rd,offset,uimm]
 fn csrrci(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
-    let temp = o.rs1 as u64; // uimm field
+    let t = o.rs1 as i64; // uimm field
     if o.rd != 0 /* x0 */ {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
             Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
             Err(e) => return Err(e),
         };
     }
-    let data = cpu.x[o.rd as usize] as u64 | !temp;
+    let data = (cpu.x[o.rd as usize] & !t) as u64;
     match cpu.csr.write(o.csr, data, addr, &cpu.privilege) {
         Ok(need_update_mmu_addressing_mode) => {
             if need_update_mmu_addressing_mode {
