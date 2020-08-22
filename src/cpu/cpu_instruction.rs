@@ -1218,7 +1218,7 @@ fn sw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sd rs2,offset(rs1)]
 fn sd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
+    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u64;
     cpu.mmu.write64(addr, data)
 }
@@ -1841,7 +1841,7 @@ fn uret(_cpu: &mut Cpu, _addr: u64, _word: u32) -> Result<(), Trap> {
 /// [sret]
 fn sret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
     cpu.pc = match cpu.csr.read(CSR_SEPC, addr, &cpu.privilege) {
-        Ok(data) => unsigned(cpu, data as i64),
+        Ok(data) => data,
         Err(e) => return Err(e),
     };
 
@@ -1870,7 +1870,7 @@ fn sret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
 /// [mret]
 fn mret(cpu: &mut Cpu, addr: u64, _word: u32) -> Result<(), Trap> {
     cpu.pc = match cpu.csr.read(CSR_MEPC, addr, &cpu.privilege) {
-        Ok(data) => unsigned(cpu, data as i64),
+        Ok(data) => data,
         Err(e) => return Err(e),
     };
 
