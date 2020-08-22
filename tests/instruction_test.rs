@@ -941,3 +941,103 @@ fn rv64uc_p_rvc() { assert_eq!(1, instruction_test("rv64uc-p-rvc")); }
 //***********************************************************************
 #[test]
 fn rv64uc_v_rvc() { assert_eq!(1, instruction_test("rv64uc-v-rvc")); }
+
+//***********************************************************************
+// rv32/64si (supervisor-level), integer only
+//***********************************************************************
+#[test]
+fn rv32si_p_csr() { assert_eq!(1, instruction_test("rv32si-p-csr")); }
+
+//#[test]
+//fn rv32si_p_dirty() { assert_eq!(1, instruction_test("rv32si-p-dirty")); }
+
+//#[test]
+//fn rv32si_p_ma_fetch() { assert_eq!(1, instruction_test("rv32si-p-ma_fetch")); }
+
+//#[test]
+//fn rv32si_p_sbreak() { assert_eq!(1, instruction_test("rv32si-p-sbreak")); }
+
+#[test]
+fn rv32si_p_scall() { assert_eq!(1, instruction_test("rv32si-p-scall")); }
+
+//#[test]
+//fn rv32si_p_wfi() { assert_eq!(1, instruction_test("rv32si-p-wfi")); }
+
+//#[test]
+//fn rv64si_p_csr() { assert_eq!(1, instruction_test("rv64si-p-csr")); }
+
+#[test]
+fn rv64si_p_icache() { assert_eq!(1, instruction_test("rv64si-p-icache-alias")); }
+
+//#[test]
+//fn rv64si_p_sbreak() { assert_eq!(1, instruction_test("rv64si-p-sbreak")); }
+
+//#[test]
+//fn rv64si_p_wfi() { assert_eq!(1, instruction_test("rv64si-p-wfi")); }
+
+//#[test]
+//fn rv64si_p_dirty() { assert_eq!(1, instruction_test("rv64si-p-dirty")); }
+
+//#[test]
+//fn rv64si_p_ma_fetch() { assert_eq!(1, instruction_test("rv64si-p-ma_fetch")); }
+
+#[test]
+fn rv64si_p_scall() { assert_eq!(1, instruction_test("rv64si-p-scall")); }
+
+//***********************************************************************
+// rv32/64mi (machine-level), integer only
+//***********************************************************************
+//#[test]
+//fn rv32mi_p_breakpoint() { assert_eq!(1, instruction_test("rv32mi-p-breakpoint")); }
+
+//#[test]
+//fn rv32mi_p_illegal() { assert_eq!(1, instruction_test("rv32mi-p-illegal")); }
+
+//#[test]
+//fn rv32mi_p_ma_fetch() { assert_eq!(1, instruction_test("rv32mi-p-ma_fetch")); }
+
+#[test]
+fn rv32mi_p_sbreak() { assert_eq!(1, instruction_test("rv32mi-p-sbreak")); }
+
+//#[test]
+//fn rv32mi_p_shamt() { assert_eq!(1, instruction_test("rv32mi-p-shamt")); }
+
+#[test]
+fn rv32mi_p_csr() { assert_eq!(1, instruction_test("rv32mi-p-csr")); }
+
+#[test]
+fn rv32mi_p_ma_addr() { assert_eq!(1, instruction_test("rv32mi-p-ma_addr")); }
+
+//#[test]
+//fn rv32mi_p_mcsr() { assert_eq!(1, instruction_test("rv32mi-p-mcsr")); }
+
+#[test]
+fn rv32mi_p_scall() { assert_eq!(1, instruction_test("rv32mi-p-scall")); }
+
+//#[test]
+//fn rv64mi_p_access() { assert_eq!(1, instruction_test("rv64mi-p-access")); }
+
+//#[test]
+//fn rv64mi_p_csr() { assert_eq!(1, instruction_test("rv64mi-p-csr")); }
+
+#[test]
+fn rv64mi_p_ma_addr() { assert_eq!(1, instruction_test("rv64mi-p-ma_addr")); }
+
+//#[test]
+//fn rv64mi_p_mcsr() { assert_eq!(1, instruction_test("rv64mi-p-mcsr")); }
+
+#[test]
+fn rv64mi_p_scall() { assert_eq!(1, instruction_test("rv64mi-p-scall")); }
+
+//#[test]
+//fn rv64mi_p_breakpoint() { assert_eq!(1, instruction_test("rv64mi-p-breakpoint")); }
+
+//#[test]
+//fn rv64mi_p_illegal() { assert_eq!(1, instruction_test("rv64mi-p-illegal")); }
+
+//#[test]
+//fn rv64mi_p_ma_fetch() { assert_eq!(1, instruction_test("rv64mi-p-ma_fetch")); }
+
+#[test]
+fn rv64mi_p_sbreak() { assert_eq!(1, instruction_test("rv64mi-p-sbreak")); }
+
