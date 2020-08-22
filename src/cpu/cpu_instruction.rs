@@ -1669,10 +1669,12 @@ fn bgeu(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrw(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = cpu.x[o.rs1 as usize] as u64;
-    if o.rd != 0 /* x0 */ {
+    if o.rd != 0
+    /* x0 */
+    {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
             Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         };
     }
     match cpu.csr.write(o.csr, temp, addr, &cpu.privilege) {
@@ -1690,10 +1692,12 @@ fn csrrw(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let temp = o.rs1 as u64; // uimm field
-    if o.rd != 0 /* x0 */ {
+    if o.rd != 0
+    /* x0 */
+    {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
             Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
-            Err(e) => return Err(e)
+            Err(e) => return Err(e),
         };
     }
     match cpu.csr.write(o.csr, temp, addr, &cpu.privilege) {
@@ -1716,21 +1720,23 @@ fn csrrwi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// Other bits in the CSR are unaffected (though CSRs might have side effects when written).
 fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
-    let temp = cpu.x[o.rs1 as usize] as u64;
-    if o.rd != 0 /* x0 */ {
+    let t = cpu.x[o.rs1 as usize];
+    if o.rd != 0
+    /* x0 */
+    {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Ok(data) => cpu.x[o.rd as usize] = data as i64,
             Err(e) => return Err(e),
         };
     }
-    let data = cpu.x[o.rd as usize] as u64 | temp;
+    let data = unsigned(cpu, cpu.x[o.rd as usize] | t);
     match cpu.csr.write(o.csr, data, addr, &cpu.privilege) {
         Ok(need_update_mmu_addressing_mode) => {
             if need_update_mmu_addressing_mode {
                 cpu.mmu.update_addressing_mode(data);
             }
             Ok(())
-        },
+        }
         Err(e) => Err(e),
     }
 }
@@ -1738,21 +1744,23 @@ fn csrrs(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 /// [csrrsi rd,offset,uimm]
 fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
-    let temp = o.rs1 as u64; // uimm field
-    if o.rd != 0 /* x0 */ {
+    let t = o.rs1 as i64; // uimm field
+    if o.rd != 0
+    /* x0 */
+    {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
-            Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
+            Ok(data) => cpu.x[o.rd as usize] = data as i64,
             Err(e) => return Err(e),
         };
     }
-    let data = cpu.x[o.rd as usize] as u64 | temp;
-    match cpu.csr.write(o.csr, data,  addr, &cpu.privilege) {
+    let data = unsigned(cpu, cpu.x[o.rd as usize] | t);
+    match cpu.csr.write(o.csr, data, addr, &cpu.privilege) {
         Ok(need_update_mmu_addressing_mode) => {
             if need_update_mmu_addressing_mode {
                 cpu.mmu.update_addressing_mode(data);
             }
             Ok(())
-        },
+        }
         Err(e) => Err(e),
     }
 }
@@ -1766,7 +1774,9 @@ fn csrrsi(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let t = cpu.x[o.rs1 as usize];
-    if o.rd != 0 /* x0 */ {
+    if o.rd != 0
+    /* x0 */
+    {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
             Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
             Err(e) => return Err(e),
@@ -1779,7 +1789,7 @@ fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
                 cpu.mmu.update_addressing_mode(data);
             }
             Ok(())
-        },
+        }
         Err(e) => Err(e),
     }
 }
@@ -1788,7 +1798,9 @@ fn csrrc(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
 fn csrrci(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_csr(word);
     let t = o.rs1 as i64; // uimm field
-    if o.rd != 0 /* x0 */ {
+    if o.rd != 0
+    /* x0 */
+    {
         match cpu.csr.read(o.csr, addr, &cpu.privilege) {
             Ok(data) => cpu.x[o.rd as usize] = signed(cpu, data as i64),
             Err(e) => return Err(e),
@@ -1801,7 +1813,7 @@ fn csrrci(cpu: &mut Cpu, addr: u64, word: u32) -> Result<(), Trap> {
                 cpu.mmu.update_addressing_mode(data);
             }
             Ok(())
-        },
+        }
         Err(e) => Err(e),
     }
 }
