@@ -29,8 +29,13 @@ impl Tty0 {
 impl Tty for Tty0 {
     fn putchar(&mut self, c: u8) {
         let str = vec![c];
-        self.window.printw(str::from_utf8(&str).unwrap());
-        self.window.refresh();
+        match str::from_utf8(&str) {
+            Ok(s) => {
+                self.window.printw(s);
+                self.window.refresh();
+            },
+            Err(_e) => {},
+        }
     }
 
     fn getchar(&mut self) -> u8 {
