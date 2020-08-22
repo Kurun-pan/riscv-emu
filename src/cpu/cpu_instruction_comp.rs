@@ -354,7 +354,7 @@ fn c_addi4spn(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fld rd’,uimm(rs1’)]
-fn c_fld(word: u16) -> Result<u32, ()> {
+fn c_fld(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -373,7 +373,7 @@ fn c_lw(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.flw rd’,uimm(rs1’)]
-fn c_flw(word: u16) -> Result<u32, ()> {
+fn c_flw(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -392,7 +392,7 @@ fn c_ld(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fsd rd’,uimm(rs1’)]
-fn c_fsd(word: u16) -> Result<u32, ()> {
+fn c_fsd(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -412,7 +412,7 @@ fn c_sw(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fsw rd’,uimm(rs1’)]
-fn c_fsw(word: u16) -> Result<u32, ()> {
+fn c_fsw(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -763,7 +763,7 @@ fn c_slli(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fldsp rd,uimm(x2)]
-fn c_fldsp(word: u16) -> Result<u32, ()> {
+fn c_fldsp(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -788,7 +788,7 @@ fn c_lwsp(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.flwsp rd,uimm(x2)]
-fn c_flwsp(word: u16) -> Result<u32, ()> {
+fn c_flwsp(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -847,7 +847,7 @@ fn c_mv(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.ebreak]
-fn c_ebreak(word: u16) -> Result<u32, ()> {
+fn c_ebreak(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -886,7 +886,7 @@ fn c_add(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fsdsp rs2,uimm(x2)]
-fn c_fsdsp(word: u16) -> Result<u32, ()> {
+fn c_fsdsp(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
@@ -905,7 +905,7 @@ fn c_swsp(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fswsp rs2,uimm(rs2)]
-fn c_fswsp(word: u16) -> Result<u32, ()> {
+fn c_fswsp(_word: u16) -> Result<u32, ()> {
     panic!("TODO");
 }
 
