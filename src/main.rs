@@ -16,7 +16,7 @@ fn main() {
     let data = vec![
         0x13, 0x85, 0x87, 0xfd // addi a0,a5,-40
     ];
-    emu.load_dram_data(data);
+    emu.set_dram_data(data);
     emu.set_pc(DRAM_BASE_ADDRESS);
     emu.run();
     */
@@ -25,19 +25,17 @@ fn main() {
     {
         let mut kernel = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         kernel.push("artifacts/xv6/kernel");
-        //kernel.push("artifacts/nuttx/nuttx");
         emu.load_program(kernel.as_path());
     }
 
-    // download disk image (filesystem).
-    /*
+    // download disk image (Userland rootfs)
     {
         let mut fs = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         fs.push("artifacts/xv6/fs.img");
-        emu.load_disk_data(fs.as_path());
-    }*/
+        emu.set_disk_data(fs.as_path());
+    }
 
-    // run
+    // run emulator.
     let result = match emu.run() {
         Ok(ret) => ret,
         Err(ret) => ret,

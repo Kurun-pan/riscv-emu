@@ -1,8 +1,11 @@
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
-use crate::tty::Tty;
+
 use crate::cpu::cpu::{Cpu, Xlen};
 use crate::elf_loader::{EMachine, EiClass, ElfLoader, ShType};
 use crate::system_bus::DRAM_ADDRESS_START;
+use crate::tty::Tty;
 
 pub struct Emulator {
     cpu: Cpu,
@@ -11,10 +14,10 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new(tty: Box<dyn Tty>, testmode: bool) -> Emulator {
+    pub fn new(tty: Box<dyn Tty>, testmode_: bool) -> Emulator {
         Self {
-            cpu: Cpu::new(tty, testmode),
-            testmode: testmode,
+            cpu: Cpu::new(tty, testmode_),
+            testmode: testmode_,
             tohost: 0,
         }
     }
@@ -27,7 +30,21 @@ impl Emulator {
         self.cpu.set_pc(addr)
     }
 
-    pub fn load_dram_data(&mut self, data: Vec<u8>) {
+    pub fn set_disk_data(&mut self, filename: &Path) {
+        match File::open(&filename) {
+            Ok(mut file) => {
+                let mut data = vec![];
+                match file.read_to_end(&mut data) {
+                    Err(why) => panic!("Failed to read {}: {}", filename.display(), why),
+                    _ => {}
+                };
+                self.cpu.mmu.get_bus().set_disk_data(data);
+            }
+            Err(why) => panic!("Falied to open {}: {}", filename.display(), why),
+        };
+    }
+
+    pub fn set_dram_data(&mut self, data: Vec<u8>) {
         self.cpu.mmu.get_bus().dram.initialize(data);
     }
 
@@ -37,9 +54,8 @@ impl Emulator {
             Err(()) => panic!(),
         };
 
-        match loader.is_elf() {
-            false => panic!("{} is not ELF file.", filename.display()),
-            _ => {}
+        if !loader.is_elf() {
+            panic!("{} is invalid ELF file.", filename.display());
         }
 
         let elf_header = loader.get_elf_header();
@@ -56,31 +72,31 @@ impl Emulator {
 
         let sec_headers = loader.get_section_header(&elf_header);
         let mut progbits_sec_headers = vec![];
-        let mut symtab_sec_headers = vec![];
         let mut strtab_sec_headers = vec![];
         for i in 0..sec_headers.len() {
             match sec_headers[i].sh_type {
                 ShType::Progbits => progbits_sec_headers.push(&sec_headers[i]),
-                ShType::Sysmtab => symtab_sec_headers.push(&sec_headers[i]),
                 ShType::Strtab => strtab_sec_headers.push(&sec_headers[i]),
                 _ => {}
             }
         }
 
         for i in 0..progbits_sec_headers.len() {
-            if progbits_sec_headers[i].sh_addr >= DRAM_ADDRESS_START
-                && progbits_sec_headers[i].sh_offset > 0
+            if !(progbits_sec_headers[i].sh_addr >= DRAM_ADDRESS_START
+                && progbits_sec_headers[i].sh_offset > 0)
             {
-                for j in 0..progbits_sec_headers[i].sh_size {
-                    let data = loader.read8((progbits_sec_headers[i].sh_offset + j) as usize);
-                    match self
-                        .cpu
-                        .mmu
-                        .write8(progbits_sec_headers[i].sh_addr + j as u64, data)
-                    {
-                        Err(e) => panic!("{:?}", e.exception),
-                        _ => {}
-                    }
+                continue;
+            }
+
+            for j in 0..progbits_sec_headers[i].sh_size {
+                let data = loader.read8((progbits_sec_headers[i].sh_offset + j) as usize);
+                match self
+                    .cpu
+                    .mmu
+                    .write8(progbits_sec_headers[i].sh_addr + j as u64, data)
+                {
+                    Err(e) => panic!("{:?}", e.exception),
+                    _ => {}
                 }
             }
         }
@@ -88,24 +104,22 @@ impl Emulator {
         if self.testmode {
             self.tohost = match loader.search_tohost(&progbits_sec_headers, &strtab_sec_headers) {
                 Some(addr) => addr,
-                None => 0
+                None => 0,
             };
-            println!(".tohost = {:x}", self.tohost);
         }
     }
 
     pub fn run(&mut self) -> Result<u32, u32> {
-        println!("Start RISC-V Emulator!");
         loop {
             self.cpu.tick();
             if self.testmode && self.tohost != 0 {
                 match self.cpu.mmu.read32_direct(self.tohost) {
                     Ok(data) => match data {
-                        0 => {},
+                        0 => {}
                         1 => return Ok(1),
-                        n => return Err(n)
+                        n => return Err(n),
                     },
-                    Err(e) => panic!("Faild to read .tohost: {:?}", e.exception)
+                    Err(e) => panic!("Faild to read .tohost: {:?}", e.exception),
                 }
             }
         }
