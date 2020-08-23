@@ -1,29 +1,33 @@
-use crate::tty::Tty;
 use crate::dram::Dram;
-use crate::peripherals::timer::Timer;
 use crate::peripherals::fu540_c000::clint::Clint;
-use crate::peripherals::uart::Uart;
-use crate::peripherals::intc::Intc;
 use crate::peripherals::fu540_c000::plic::Plic;
+use crate::peripherals::intc::Intc;
+use crate::peripherals::timer::Timer;
+use crate::peripherals::uart::Uart;
+use crate::peripherals::virtio::Virtio;
+use crate::tty::Tty;
 
 pub const TIMER_ADDRESS_START: u64 = 0x0200_0000;
-pub const TIMER_ADDRESS_END:   u64 = 0x0200_FFFF;
+pub const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
 
-pub const INTC_ADDRESS_START:  u64 = 0x0C00_0000;
-pub const INTC_ADDRESS_END:    u64 = 0x0FFF_FFFF;
+pub const INTC_ADDRESS_START: u64 = 0x0C00_0000;
+pub const INTC_ADDRESS_END: u64 = 0x0FFF_FFFF;
 
-pub const UART_ADDRESS_START:  u64 = 0x1000_0000;
-pub const UART_ADDRESS_END:    u64 = 0x1000_FFFF;
+pub const UART_ADDRESS_START: u64 = 0x1000_0000;
+pub const UART_ADDRESS_END: u64 = 0x1000_0FFF;
 
-pub const DRAM_ADDRESS_START:  u64 = 0x8000_0000;
+pub const VIRTIO_ADDRESS_START: u64 = 0x1000_1000;
+pub const VIRTIO_ADDRESS_END: u64 = 0x1000_1FFF;
 
-// Physical memory layout
+pub const DRAM_ADDRESS_START: u64 = 0x8000_0000;
+
+// Physical memory layout for xv6-riscv
 // -------------------------------------------------
 // 00001000 -- boot ROM, provided by qemu
 // 02000000 -- CLINT
 // 0C000000 -- PLIC
-// 10000000 -- uart0 
-// 10001000 -- virtio disk 
+// 10000000 -- uart0
+// 10001000 -- virtio disk
 // 80000000 -- boot ROM jumps here in machine mode
 //             -kernel loads the kernel here
 // unused RAM after 80000000.
@@ -35,6 +39,7 @@ pub struct SystemBus {
     timer: Box<dyn Timer>,
     intc: Box<dyn Intc>,
     uart: Uart,
+    virtio: Virtio,
 }
 
 impl SystemBus {
@@ -45,29 +50,38 @@ impl SystemBus {
             timer: Box::new(Clint::new()),
             intc: Box::new(Plic::new()),
             uart: Uart::new(tty),
+            virtio: Virtio::new(),
         }
+    }
+
+    pub fn set_disk_data(&mut self, data: Vec<u8>) {
+        self.virtio.init(data);
     }
 
     pub fn tick(&mut self) -> Vec<bool> {
         self.clock = self.clock.wrapping_add(1);
 
-        // TODO: care 1MHz clock (RTCCLK).
-        if self.clock & 0xf == 0 {
-            self.timer.tick();
-        }
+        self.virtio.tick(&mut self.dram);
+        self.timer.tick();
+        self.uart.tick();
 
-        // TODO: care ???Hz clock
-        let mut interrupt_uart = false;
-        if self.clock & 0xf == 0 {
-            self.uart.tick();
-            interrupt_uart = self.uart.is_irq();
-        }
-
+        // https://github.com/mit-pdos/xv6-riscv/blob/riscv/kernel/memlayout.h
         let mut interrupts: Vec<usize> = Vec::new();
-        if interrupt_uart {
-             interrupts.push(10); // Interrupt ID for UART0
+        if self.uart.is_irq() {
+            interrupts.push(10); // Interrupt ID for UART0
+        }
+        if self.virtio.is_irq() {
+            interrupts.push(1); // Interrupt ID for Virtio
         }
         self.intc.tick(0, interrupts)
+    }
+
+    pub fn is_pending_software_interrupt(&mut self, core: usize) -> bool {
+        self.timer.is_pending_software_interrupt(core)
+    }
+
+    pub fn is_pending_timer_interrupt(&mut self, core: usize) -> bool {
+        self.timer.is_pending_timer_interrupt(core)
     }
 
     pub fn read8(&mut self, addr: u64) -> Result<u8, ()> {
@@ -76,8 +90,9 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
-            INTC_ADDRESS_START..=INTC_ADDRESS_START => panic!("Unexpected size access."),
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.read(addr - UART_ADDRESS_START)),
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
             _ => Err(()),
         }
     }
@@ -88,13 +103,14 @@ impl SystemBus {
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
-            INTC_ADDRESS_START..=INTC_ADDRESS_START => panic!("Unexpected size access."),
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
                 let data = self.uart.read(addr_) as u16
                     | ((self.uart.read(addr_.wrapping_add(1)) as u16) << 8);
                 Ok(data)
             }
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
             _ => Err(()),
         }
     }
@@ -107,16 +123,17 @@ impl SystemBus {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.read(addr - TIMER_ADDRESS_START))
             }
-            INTC_ADDRESS_START..=INTC_ADDRESS_START => {
-                Ok(self.intc.read(addr - INTC_ADDRESS_START))
-            }
+            INTC_ADDRESS_START..=INTC_ADDRESS_END => Ok(self.intc.read(addr - INTC_ADDRESS_START)),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
                 let data = self.uart.read(addr_) as u32
                     | ((self.uart.read(addr_.wrapping_add(1)) as u32) << 8)
                     | ((self.uart.read(addr_.wrapping_add(2)) as u32) << 16)
                     | ((self.uart.read(addr_.wrapping_add(3)) as u32) << 24);
-                    Ok(data)
+                Ok(data)
+            }
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => {
+                Ok(self.virtio.read(addr - VIRTIO_ADDRESS_START))
             }
             _ => Err(()),
         }
@@ -149,93 +166,124 @@ impl SystemBus {
                     | ((self.uart.read(addr_.wrapping_add(5)) as u64) << 40)
                     | ((self.uart.read(addr_.wrapping_add(6)) as u64) << 48)
                     | ((self.uart.read(addr_.wrapping_add(7)) as u64) << 56);
-                    Ok(data)
+                Ok(data)
+            }
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => {
+                let virtio_addr = addr - VIRTIO_ADDRESS_START;
+                let data = self.virtio.read(virtio_addr) as u64
+                    | ((self.virtio.read(virtio_addr.wrapping_add(4)) as u64) << 32);
+                Ok(data)
             }
             _ => Err(()),
         }
     }
 
-    pub fn write8(&mut self, addr: u64, val: u8) -> Result<(), ()> {
+    pub fn write8(&mut self, addr: u64, data: u8) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write8(addr - DRAM_ADDRESS_START, val));
+            return Ok(self.dram.write8(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
-            UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.write(addr - UART_ADDRESS_START, val)),
+            UART_ADDRESS_START..=UART_ADDRESS_END => {
+                Ok(self.uart.write(addr - UART_ADDRESS_START, data))
+            }
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
             _ => Err(()),
         }
     }
 
-    pub fn write16(&mut self, addr: u64, val: u16) -> Result<(), ()> {
+    pub fn write16(&mut self, addr: u64, data: u16) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write16(addr - DRAM_ADDRESS_START, val));
+            return Ok(self.dram.write16(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
-                self.uart.write(addr_, (val & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(1), ((val >> 8) & 0xff) as u8);
+                self.uart.write(addr_, (data & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(1), ((data >> 8) & 0xff) as u8);
                 Ok(())
             }
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
             _ => Err(()),
         }
     }
 
-    pub fn write32(&mut self, addr: u64, val: u32) -> Result<(), ()> {
+    pub fn write32(&mut self, addr: u64, data: u32) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write32(addr - DRAM_ADDRESS_START, val));
+            return Ok(self.dram.write32(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
-                Ok(self.timer.write(addr - TIMER_ADDRESS_START, val))
+                Ok(self.timer.write(addr - TIMER_ADDRESS_START, data))
             }
             INTC_ADDRESS_START..=INTC_ADDRESS_END => {
-                Ok(self.intc.write(addr - INTC_ADDRESS_START, val))
+                Ok(self.intc.write(addr - INTC_ADDRESS_START, data))
             }
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
-                self.uart.write(addr_, (val & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(1), ((val >> 8) & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(2), ((val >> 16) & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(3), ((val >> 24) & 0xff) as u8);
+                self.uart.write(addr_, (data & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(1), ((data >> 8) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(2), ((data >> 16) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(3), ((data >> 24) & 0xff) as u8);
                 Ok(())
+            }
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => {
+                Ok(self.virtio.write(addr - VIRTIO_ADDRESS_START, data))
             }
             _ => Err(()),
         }
     }
 
-    pub fn write64(&mut self, addr: u64, val: u64) -> Result<(), ()> {
+    pub fn write64(&mut self, addr: u64, data: u64) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write64(addr - DRAM_ADDRESS_START, val));
+            return Ok(self.dram.write64(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
-                self.timer.write(timer_addr, val as u32);
+                self.timer.write(timer_addr, data as u32);
                 self.timer
-                    .write(timer_addr.wrapping_add(4), (val >> 32 & 0xffff) as u32);
+                    .write(timer_addr.wrapping_add(4), (data >> 32 & 0xffff) as u32);
                 Ok(())
             }
             INTC_ADDRESS_START..=INTC_ADDRESS_END => {
                 let intc_addr = addr - INTC_ADDRESS_START;
-                self.intc.write(intc_addr, val as u32);
+                self.intc.write(intc_addr, data as u32);
                 self.intc
-                    .write(intc_addr.wrapping_add(4), (val >> 32 & 0xffff) as u32);
+                    .write(intc_addr.wrapping_add(4), (data >> 32 & 0xffff) as u32);
                 Ok(())
             }
             UART_ADDRESS_START..=UART_ADDRESS_END => {
                 let addr_ = addr - UART_ADDRESS_START;
-                self.uart.write(addr_, (val & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(1), ((val >> 8) & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(2), ((val >> 16) & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(3), ((val >> 24) & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(4), ((val >> 32) & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(5), ((val >> 40) & 0xff) as u8);                
-                self.uart.write(addr_.wrapping_add(6), ((val >> 48) & 0xff) as u8);
-                self.uart.write(addr_.wrapping_add(7), ((val >> 56) & 0xff) as u8);
+                self.uart.write(addr_, (data & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(1), ((data >> 8) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(2), ((data >> 16) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(3), ((data >> 24) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(4), ((data >> 32) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(5), ((data >> 40) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(6), ((data >> 48) & 0xff) as u8);
+                self.uart
+                    .write(addr_.wrapping_add(7), ((data >> 56) & 0xff) as u8);
+                Ok(())
+            }
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => {
+                let virtio_addr = addr - VIRTIO_ADDRESS_START;
+                self.virtio.write(virtio_addr, data as u32);
+                self.virtio
+                    .write(virtio_addr.wrapping_add(4), (data >> 32 & 0xffff) as u32);
                 Ok(())
             }
             _ => Err(()),
