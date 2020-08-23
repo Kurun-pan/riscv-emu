@@ -1,12 +1,12 @@
-// 16550a UART
+// 16550a UART Device
 // http://byterunner.com/16550.html
 
 use crate::tty::Tty;
 
-const _IER_DATA_READY: u8 = 0x01;
-const _IER_THR_EMPTY: u8 = 0x02;
+const IER_DATA_READY: u8 = 0x01;
+const IER_THR_EMPTY: u8 = 0x02;
 
-const ISR_INTERRUPT_STATUS_NO_INTERRUPT: u8 = 0x01;
+const ISR_INTERRUPT_STATUS_INTERRUPT: u8 = 0x01;
 const ISR_IDENTIFICATION_CODE_DATA_READY: u8 = 0x4;
 const ISR_IDENTIFICATION_CODE_THR_EMPTY: u8 = 0x2;
 
@@ -38,6 +38,8 @@ pub struct Uart {
     spr: u8,
     /// Terminal for serial console.
     tty: Box<dyn Tty>,
+    /// current clock cycle.
+    cycle: u64,
 }
 
 impl Uart {
@@ -54,28 +56,34 @@ impl Uart {
             msr: 0,
             spr: 0,
             tty: tty_,
+            cycle: 0,
         }
     }
 
     pub fn tick(&mut self) {
+        self.cycle = self.cycle.wrapping_add(1);
+
+        // TODO: Correctly care for the clock frequency (1MHz clock @ RTCCLK).
+        // The current settings have no reason.
+
         // receiver
-        if self.rhr == 0 {
+        if (self.cycle & 0xffff) == 0 && self.rhr == 0 {
             match self.tty.getchar() {
                 0 => {}
                 c => {
                     self.rhr = c;
                     //if (self.ier & IER_DATA_READY) > 0 {
-                        self.lsr |= LSR_DATA_READY;
+                    self.lsr |= LSR_DATA_READY;
                     //}
                 }
             }
         }
         // transmitter
-        if self.thr != 0 {
+        if (self.cycle & 0xf) == 0 && self.thr != 0 {
             self.tty.putchar(self.thr);
             self.thr = 0;
             //if (self.ier & IER_THR_EMPTY) > 0 {
-                self.lsr |= LSR_THR_EMPTY;
+            self.lsr |= LSR_THR_EMPTY;
             //}
         }
     }
@@ -88,9 +96,7 @@ impl Uart {
                 self.lsr &= !LSR_DATA_READY;
                 rhr
             }
-            1 => {
-                self.ier
-            }
+            1 => self.ier,
             2 => self.isr,
             3 => self.lcr,
             4 => self.mcr,
@@ -125,15 +131,15 @@ impl Uart {
     }
 
     pub fn is_irq(&mut self) -> bool {
-        if (self.lsr & LSR_DATA_READY) > 0 {
+        if (self.ier & IER_DATA_READY) != 0 && self.rhr != 0 {
             self.isr = self.isr & 0xf0 | ISR_IDENTIFICATION_CODE_DATA_READY;
             return true;
         }
-        if (self.lsr & LSR_THR_EMPTY) > 0 {
+        if (self.ier & IER_THR_EMPTY) != 0 && self.thr == 0 {
             self.isr = self.isr & 0xf0 | ISR_IDENTIFICATION_CODE_THR_EMPTY;
             return true;
         }
-        self.isr = self.isr & 0xf0 | ISR_INTERRUPT_STATUS_NO_INTERRUPT;
+        self.isr = self.isr & !ISR_INTERRUPT_STATUS_INTERRUPT;
         false
     }
 }
