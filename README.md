@@ -2,7 +2,12 @@
 
 `riscv-emu` is a RISC-V emulator that is written in Rust.
 
-# Support Status
+## Demo
+
+### xv6
+![animation](./demo/xv6-riscv.gif)
+
+## Support Status
 
 ### Instructions
 
@@ -27,14 +32,21 @@
 - [x] Timer ([CLINT](https://static.dev.sifive.com/FU540-C000-v1.0.pdf))
 - [x] Uart (UART 16550)
 - [x] Interrupt Controller (PLIC)
-- [ ] Virtio
+- [x] Virtio Disk
 
 ### Support OS
 
-I'm working now..
  - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
 
-# Tests
+## How to run
+
+### xv6
+
+```
+$ cargo run --release
+```
+
+## Tests
 
 ### Instruction Regression Tests
 
@@ -42,9 +54,6 @@ I'm working now..
 $ cargo test
 ```
 
-# References
-
-### Tests
+## References
 
 - [riscv/riscv-tests](https://github.com/riscv/riscv-tests)
-
