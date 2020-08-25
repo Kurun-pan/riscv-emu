@@ -494,8 +494,7 @@ impl Cpu {
     }
 
     fn get_next_privilege(&mut self, trap_code: u8, is_interrupt: bool) -> Privilege {
-        let cause = self.get_cause(trap_code, is_interrupt);
-        &0xf;
+        let cause = self.get_cause(trap_code, is_interrupt) & 0xf;
         let mdeleg = self.csr.read_direct(match is_interrupt {
             true => CSR_MIDELEG,
             _ => CSR_MEDELEG,
