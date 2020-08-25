@@ -328,14 +328,14 @@ impl SystemBus {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 self.timer.write(timer_addr, data as u32);
                 self.timer
-                    .write(timer_addr.wrapping_add(4), (data >> 32 & 0xffffffff) as u32);
+                    .write(timer_addr.wrapping_add(4), ((data >> 32) & 0xffffffff) as u32);
                 Ok(())
             }
             INTC_ADDRESS_START..=INTC_ADDRESS_END => {
                 let intc_addr = addr - INTC_ADDRESS_START;
                 self.intc.write(intc_addr, data as u32);
                 self.intc
-                    .write(intc_addr.wrapping_add(4), (data >> 32 & 0xffffffff) as u32);
+                    .write(intc_addr.wrapping_add(4), ((data >> 32) & 0xffffffff) as u32);
                 Ok(())
             }
             UART_ADDRESS_START..=UART_ADDRESS_END => {
@@ -361,21 +361,21 @@ impl SystemBus {
                 let virtio_addr = addr - VIRTIO_ADDRESS_START;
                 self.virtio.write(virtio_addr, data as u32);
                 self.virtio
-                    .write(virtio_addr.wrapping_add(4), (data >> 32 & 0xffffffff) as u32);
+                    .write(virtio_addr.wrapping_add(4), ((data >> 32) & 0xffffffff) as u32);
                 Ok(())
             }
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => {
                 let prci_addr = addr - PRCI_ADDRESS_START;
                 self.prci.write(prci_addr, data as u32);
                 self.prci
-                    .write(prci_addr.wrapping_add(4), (data >> 32 & 0xffffffff) as u32);
+                    .write(prci_addr.wrapping_add(4), ((data >> 32) & 0xffffffff) as u32);
                 Ok(())
             }
             GPIO_ADDRESS_START..=GPIO_ADDRESS_END => {
                 let gpio_addr = addr - GPIO_ADDRESS_START;
                 self.gpio.write(gpio_addr, data as u32);
                 self.gpio
-                    .write(gpio_addr.wrapping_add(4), (data >> 32 & 0xffffffff) as u32);
+                    .write(gpio_addr.wrapping_add(4), ((data >> 32) & 0xffffffff) as u32);
                 Ok(())
             }
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
