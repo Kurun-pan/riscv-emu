@@ -29,14 +29,21 @@
 
 ### Peripherals
 
-- [x] Timer ([CLINT](https://static.dev.sifive.com/FU540-C000-v1.0.pdf))
+#### General
 - [x] Uart (UART 16550)
-- [x] Interrupt Controller (PLIC)
 - [x] Virtio Disk
+
+#### For FU540-C000
+- [x] Timer ([CLINT](https://static.dev.sifive.com/FU540-C000-v1.0.pdf))
+- [x] Interrupt Controller (PLIC)
+
+#### For FE310-G002
+- [x] [PRCI](https://sifive.cdn.prismic.io/sifive%2F9ecbb623-7c7f-4acc-966f-9bb10ecdb62e_fe310-g002.pdf)
 
 ### Support OS
 
  - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
+ - Nuttx (Now, working to supprot!!)
 
 ## How to run
 
