@@ -5,7 +5,7 @@ extern crate memmap;
 pub mod emulator;
 pub mod tty;
 pub mod cpu;
-pub mod dram;
+pub mod memory;
 pub mod mmu;
 pub mod system_bus;
 pub mod elf_loader;

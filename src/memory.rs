@@ -1,55 +1,53 @@
-pub const MAX_DRAM_SIZE: u64 = 1024 * 1024 * 128;
-
-pub struct Dram {
-    pub dram: Vec<u8>,
+pub struct Memory {
+    pub mem: Vec<u8>,
 }
 
-impl Dram {
-    pub fn new() -> Self {
+impl Memory {
+    pub fn new(max_size: usize) -> Self {
         Self {
-            dram: vec![0; MAX_DRAM_SIZE as usize],
+            mem: vec![0; max_size],
         }
     }
 
     pub fn initialize(&mut self, data: Vec<u8>) {
-        self.dram.splice(..data.len(), data.iter().cloned());
+        self.mem.splice(..data.len(), data.iter().cloned());
     }
 
     pub fn write8(&mut self, addr: u64, data: u8) {
-        self.dram[addr as usize] = data;
+        self.mem[addr as usize] = data;
     }
 
     pub fn write16(&mut self, addr: u64, data: u16) {
         let index = addr as usize;
         for i in 0..2 {
-            self.dram[index + i] = ((data >> (i * 8)) & 0xff) as u8;
+            self.mem[index + i] = ((data >> (i * 8)) & 0xff) as u8;
         }
     }
 
     pub fn write32(&mut self, addr: u64, data: u32) {
         let index = addr as usize;
         for i in 0..4 {
-            self.dram[index + i] = ((data >> (i * 8)) & 0xff) as u8;
+            self.mem[index + i] = ((data >> (i * 8)) & 0xff) as u8;
         }
     }
 
     pub fn write64(&mut self, addr: u64, data: u64) {
         let index = addr as usize;
         for i in 0..8 {
-            self.dram[index + i] = ((data >> (i * 8)) & 0xff) as u8;
+            self.mem[index + i] = ((data >> (i * 8)) & 0xff) as u8;
         }
     }
 
     pub fn read8(&self, addr: u64) -> u8 {
         let index = addr as usize;
-        self.dram[index]
+        self.mem[index]
     }
 
     pub fn read16(&self, addr: u64) -> u16 {
         let index = addr as usize;
         let mut data = 0 as u16;
         for i in 0..2 {
-            data |= (self.dram[index + i] as u16) << (i * 8);
+            data |= (self.mem[index + i] as u16) << (i * 8);
         }
         data
     }
@@ -58,7 +56,7 @@ impl Dram {
         let index = addr as usize;
         let mut data = 0 as u32;
         for i in 0..4 {
-            data |= (self.dram[index + i] as u32) << (i * 8);
+            data |= (self.mem[index + i] as u32) << (i * 8);
         }
         data
     }
@@ -67,7 +65,7 @@ impl Dram {
         let index = addr as usize;
         let mut data = 0 as u64;
         for i in 0..8 {
-            data |= (self.dram[index + i] as u64) << (i * 8);
+            data |= (self.mem[index + i] as u64) << (i * 8);
         }
         data
     }

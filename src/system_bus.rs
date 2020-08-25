@@ -1,4 +1,6 @@
-use crate::dram::Dram;
+use crate::memory::Memory;
+use crate::peripherals::fe310_g002::prci::Prci;
+use crate::peripherals::fe310_g002::gpio::Gpio;
 use crate::peripherals::fu540_c000::clint::Clint;
 use crate::peripherals::fu540_c000::plic::Plic;
 use crate::peripherals::intc::Intc;
@@ -7,6 +9,9 @@ use crate::peripherals::uart::Uart;
 use crate::peripherals::virtio::Virtio;
 use crate::tty::Tty;
 
+// --------------------------------------------------------
+// for xv6
+// --------------------------------------------------------
 pub const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 pub const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
 
@@ -33,24 +38,46 @@ pub const DRAM_ADDRESS_START: u64 = 0x8000_0000;
 // unused RAM after 80000000.
 // -------------------------------------------------
 
+// --------------------------------------------------------
+// for nuttx
+// --------------------------------------------------------
+// https://bitbucket.org/nuttx/nuttx/src/master/arch/risc-v/src/fe310/hardware/fe310_memorymap.h
+pub const PRCI_ADDRESS_START: u64 = 0x1000_8000;
+pub const PRCI_ADDRESS_END: u64 = 0x1000_8FFF;
+
+pub const GPIO_ADDRESS_START: u64 = 0x1001_2000;
+pub const GPIO_ADDRESS_END: u64 = 0x1001_2FFF;
+
+pub const SPIFLASH_ADDRESS_START: u64 = 0x2000_0000;
+pub const SPIFLASH_ADDRESS_END: u64 = 0x3FFF_FFFF;
+
+pub const MAX_DRAM_SIZE: usize = 1024 * 1024 * 128;
+pub const MAX_FLASH_SIZE: usize = 1024 * 1024 * 512;
+
 pub struct SystemBus {
     clock: u64,
-    pub dram: Dram,
+    pub dram: Memory,
+    flash: Memory,
     timer: Box<dyn Timer>,
     intc: Box<dyn Intc>,
     uart: Uart,
     virtio: Virtio,
+    prci: Prci,
+    gpio: Gpio,
 }
 
 impl SystemBus {
     pub fn new(tty: Box<dyn Tty>) -> Self {
         Self {
             clock: 0,
-            dram: Dram::new(),
+            dram: Memory::new(MAX_DRAM_SIZE),
+            flash: Memory::new(MAX_FLASH_SIZE),
             timer: Box::new(Clint::new()),
             intc: Box::new(Plic::new()),
             uart: Uart::new(tty),
             virtio: Virtio::new(),
+            prci: Prci::new(),
+            gpio: Gpio::new(),
         }
     }
 
@@ -64,6 +91,8 @@ impl SystemBus {
         self.virtio.tick(&mut self.dram);
         self.timer.tick();
         self.uart.tick();
+        self.prci.tick();
+        self.gpio.tick();
 
         // https://github.com/mit-pdos/xv6-riscv/blob/riscv/kernel/memlayout.h
         let mut interrupts: Vec<usize> = Vec::new();
@@ -93,6 +122,11 @@ impl SystemBus {
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.read(addr - UART_ADDRESS_START)),
             VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => panic!("Unexpected size access."),
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.read8(addr - SPIFLASH_ADDRESS_START))
+            }
             _ => Err(()),
         }
     }
@@ -111,6 +145,11 @@ impl SystemBus {
                 Ok(data)
             }
             VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => panic!("Unexpected size access."),
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.read16(addr - SPIFLASH_ADDRESS_START))
+            }
             _ => Err(()),
         }
     }
@@ -134,6 +173,11 @@ impl SystemBus {
             }
             VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => {
                 Ok(self.virtio.read(addr - VIRTIO_ADDRESS_START))
+            }
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => Ok(self.prci.read(addr - PRCI_ADDRESS_START)),
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => Ok(self.gpio.read(addr - GPIO_ADDRESS_START)),
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.read32(addr - SPIFLASH_ADDRESS_START))
             }
             _ => Err(()),
         }
@@ -174,6 +218,21 @@ impl SystemBus {
                     | ((self.virtio.read(virtio_addr.wrapping_add(4)) as u64) << 32);
                 Ok(data)
             }
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => {
+                let prci_addr = addr - PRCI_ADDRESS_START;
+                let data = self.prci.read(prci_addr) as u64
+                    | ((self.prci.read(prci_addr.wrapping_add(4)) as u64) << 32);
+                Ok(data)
+            }
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => {
+                let gpio_addr = addr - GPIO_ADDRESS_START;
+                let data = self.gpio.read(gpio_addr) as u64
+                    | ((self.gpio.read(gpio_addr.wrapping_add(4)) as u64) << 32);
+                Ok(data)
+            }
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.read64(addr - SPIFLASH_ADDRESS_START))
+            }
             _ => Err(()),
         }
     }
@@ -189,6 +248,11 @@ impl SystemBus {
                 Ok(self.uart.write(addr - UART_ADDRESS_START, data))
             }
             VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => panic!("Unexpected size access."),
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.write8(addr - SPIFLASH_ADDRESS_START, data))
+            }
             _ => Err(()),
         }
     }
@@ -208,6 +272,11 @@ impl SystemBus {
                 Ok(())
             }
             VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => panic!("Unexpected size access."),
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.write16(addr - SPIFLASH_ADDRESS_START, data))
+            }
             _ => Err(()),
         }
     }
@@ -236,6 +305,15 @@ impl SystemBus {
             }
             VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => {
                 Ok(self.virtio.write(addr - VIRTIO_ADDRESS_START, data))
+            }
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => {
+                Ok(self.prci.write(addr - PRCI_ADDRESS_START, data))
+            }
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => {
+                Ok(self.gpio.write(addr - GPIO_ADDRESS_START, data))
+            }
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.write32(addr - SPIFLASH_ADDRESS_START, data))
             }
             _ => Err(()),
         }
@@ -285,6 +363,23 @@ impl SystemBus {
                 self.virtio
                     .write(virtio_addr.wrapping_add(4), (data >> 32 & 0xffff) as u32);
                 Ok(())
+            }
+            PRCI_ADDRESS_START..=PRCI_ADDRESS_END => {
+                let prci_addr = addr - PRCI_ADDRESS_START;
+                self.prci.write(prci_addr, data as u32);
+                self.prci
+                    .write(prci_addr.wrapping_add(4), (data >> 32 & 0xffff) as u32);
+                Ok(())
+            }
+            GPIO_ADDRESS_START..=GPIO_ADDRESS_END => {
+                let gpio_addr = addr - GPIO_ADDRESS_START;
+                self.gpio.write(gpio_addr, data as u32);
+                self.gpio
+                    .write(gpio_addr.wrapping_add(4), (data >> 32 & 0xffff) as u32);
+                Ok(())
+            }
+            SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
+                Ok(self.flash.write64(addr - SPIFLASH_ADDRESS_START, data))
             }
             _ => Err(()),
         }

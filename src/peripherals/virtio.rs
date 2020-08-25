@@ -4,7 +4,7 @@
 // https://syuu1228.github.io/howto_implement_hypervisor/part12.html
 // https://syuu1228.github.io/howto_implement_hypervisor/part20.html
 
-use crate::dram::Dram;
+use crate::memory::Memory;
 use crate::system_bus::DRAM_ADDRESS_START;
 
 const CONFIG_QUEUE_NUM_MAX: u32 = 0x16;
@@ -110,7 +110,7 @@ impl Virtio {
         }
     }
 
-    pub fn tick(&mut self, dram: &mut Dram) {
+    pub fn tick(&mut self, dram: &mut Memory) {
         self.cycle = self.cycle.wrapping_add(1);
         if self.queue_notify.len() > 0 && (self.cycle == self.queue_notify[0] + CONFIG_DMA_DELAY) {
             self.transfer(dram);
@@ -161,7 +161,7 @@ impl Virtio {
         }
     }
 
-    fn transfer(&mut self, dram: &mut Dram) {
+    fn transfer(&mut self, dram: &mut Memory) {
         let queue_size = self.queue_num as u64;
         let vq = self.get_virtqueue();
 
@@ -282,7 +282,7 @@ impl Virtio {
         }
     }
 
-    fn get_descriptor(&mut self, dram: &mut Dram, table_head: u64, prev: u64) -> Descriptor {
+    fn get_descriptor(&mut self, dram: &mut Memory, table_head: u64, prev: u64) -> Descriptor {
         /* Descriptor entiry
          * -----------------
          * u64 addr
@@ -300,14 +300,14 @@ impl Virtio {
         }
     }
 
-    fn dma_disk_to_memory(&mut self, dram: &mut Dram, mem_addr: u64, disk_addr: u64, len: u64) {
+    fn dma_disk_to_memory(&mut self, dram: &mut Memory, mem_addr: u64, disk_addr: u64, len: u64) {
         for i in 0..(len / 8) {
             let idx = ((disk_addr + i * 8) >> 3) as usize;
             dram.write64(mem_addr + i * 8, self.disk_image[idx]);
         }
     }
 
-    fn dma_memory_to_disk(&mut self, dram: &mut Dram, mem_addr: u64, disk_addr: u64, len: u64) {
+    fn dma_memory_to_disk(&mut self, dram: &mut Memory, mem_addr: u64, disk_addr: u64, len: u64) {
         for i in 0..(len / 8) {
             let idx = ((disk_addr + i * 8) >> 3) as usize;
             self.disk_image[idx] = dram.read64(mem_addr + i * 8);
