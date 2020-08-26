@@ -26,7 +26,7 @@ const PLIC_MCLAIM_BASE: u64 = 0x200004;
 const PLIC_SCLAIM_BASE: u64 = 0x201004;
 
 const PLIC_CORE_MAX: usize = 5;
-const PLIC_INT_MAX: usize = 32;
+const PLIC_INT_MAX: usize = 52 + 1;
 
 pub struct Plic {
     priority: [u32; PLIC_INT_MAX],
