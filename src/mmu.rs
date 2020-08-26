@@ -1,6 +1,8 @@
 use crate::cpu::cpu::{Privilege, Xlen};
 use crate::cpu::trap::*;
-use crate::system_bus::SystemBus;
+use crate::bus::bus::Bus;
+use crate::bus::bus_fe310::BusFe310;
+use crate::bus::bus_fu540::BusFu540;
 use crate::tty::Tty;
 use std::collections::HashMap;
 
@@ -17,7 +19,7 @@ pub enum AddressingMode {
 }
 
 pub struct Mmu {
-    pub bus: SystemBus,
+    pub bus: Box<dyn Bus>,
     xlen: Xlen,
     ppn: u64,
     addressing_mode: AddressingMode,
@@ -48,7 +50,10 @@ enum MemoryAccessType {
 impl Mmu {
     pub fn new(_xlen: Xlen, tty: Box<dyn Tty>) -> Self {
         Mmu {
-            bus: SystemBus::new(tty),
+            #[cfg(not(feature="nuttx"))]
+            bus: Box::new(BusFu540::new(tty)),
+            #[cfg(feature="nuttx")]
+            bus: Box::new(BusFe310::new(tty)),
             xlen: _xlen,
             ppn: 0,
             addressing_mode: AddressingMode::Bare,
@@ -100,7 +105,7 @@ impl Mmu {
         }
     }
 
-    pub fn get_bus(&mut self) -> &mut SystemBus {
+    pub fn get_bus(&mut self) -> &mut Box<dyn Bus> {
         &mut self.bus
     }
 

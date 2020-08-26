@@ -4,8 +4,8 @@ use std::path::Path;
 
 use crate::cpu::cpu::{Cpu, Xlen};
 use crate::elf_loader::{EMachine, EiClass, ElfLoader, ShType};
-use crate::system_bus::DRAM_ADDRESS_START;
 use crate::tty::Tty;
+use crate::bus::bus::Device;
 
 pub struct Emulator {
     cpu: Cpu,
@@ -38,14 +38,16 @@ impl Emulator {
                     Err(why) => panic!("Failed to read {}: {}", filename.display(), why),
                     _ => {}
                 };
-                self.cpu.mmu.get_bus().set_disk_data(data);
+                let bus = self.cpu.mmu.get_bus();
+                bus.set_device_data(Device::Disk, data);
             }
             Err(why) => panic!("Falied to open {}: {}", filename.display(), why),
         };
     }
 
     pub fn set_dram_data(&mut self, data: Vec<u8>) {
-        self.cpu.mmu.get_bus().dram.initialize(data);
+        let bus = self.cpu.mmu.get_bus();
+        bus.set_device_data(Device::Dram, data);
     }
 
     pub fn load_program(&mut self, filename: &Path) {
@@ -82,7 +84,7 @@ impl Emulator {
         }
 
         for i in 0..progbits_sec_headers.len() {
-            if !(progbits_sec_headers[i].sh_addr >= DRAM_ADDRESS_START
+            if !((progbits_sec_headers[i].sh_addr >= self.cpu.mmu.get_bus().get_base_address(Device::Dram))
                 && progbits_sec_headers[i].sh_offset > 0)
             {
                 continue;

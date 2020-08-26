@@ -24,12 +24,15 @@ fn main() {
     // download user program to main mermoy.
     {
         let mut kernel = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        #[cfg(not(feature="nuttx"))]
         kernel.push("artifacts/xv6/kernel");
+        #[cfg(feature="nuttx")]
+        kernel.push("artifacts/nuttx/nuttx");
         emu.load_program(kernel.as_path());
     }
 
     // download disk image (Userland rootfs)
-    {
+    if cfg!(feature="xv6") {
         let mut fs = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         fs.push("artifacts/xv6/fs.img");
         emu.set_disk_data(fs.as_path());

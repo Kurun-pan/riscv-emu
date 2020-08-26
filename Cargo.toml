@@ -8,3 +8,8 @@ edition = "2018"
 lazy_static = "1.4.0"
 memmap = "0.7.0"
 pancurses = "0.16.1"
+
+[features]
+default = ["xv6"]
+xv6 = []
+nuttx = []

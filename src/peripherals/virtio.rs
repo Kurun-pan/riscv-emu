@@ -5,7 +5,6 @@
 // https://syuu1228.github.io/howto_implement_hypervisor/part20.html
 
 use crate::memory::Memory;
-use crate::system_bus::DRAM_ADDRESS_START;
 
 const CONFIG_QUEUE_NUM_MAX: u32 = 0x16;
 const CONFIG_DISK_SECTOR_SIZE: u64 = 512;
@@ -62,6 +61,8 @@ pub struct Virtio {
     disk_image: Vec<u64>,
     /// last available ring index
     last_available_idx: u64,
+    /// Main Memory Base Address
+    dram_base_addr: u64,
 
     ///	Flags representing device features understood and activated by the driver (WO)
     driver_features: u32,
@@ -84,11 +85,12 @@ pub struct Virtio {
 }
 
 impl Virtio {
-    pub fn new() -> Self {
+    pub fn new(dram_base_addr_: u64) -> Self {
         Virtio {
             cycle: 0,
             disk_image: vec![],
             last_available_idx: 0,
+            dram_base_addr: dram_base_addr_,
             driver_features: 0,
             guest_page_size: 0,
             queue_sel: 0,
@@ -261,7 +263,7 @@ impl Virtio {
         let v_desc_table_addr;
         {
             let page_addr = self.queue_pfn as u64 * self.guest_page_size as u64;
-            v_desc_table_addr = page_addr.wrapping_sub(DRAM_ADDRESS_START);
+            v_desc_table_addr = page_addr.wrapping_sub(self.dram_base_addr);
         }
 
         // available ring head address
@@ -293,7 +295,7 @@ impl Virtio {
         let queue_size = self.queue_num as u64;
         let entity = table_head + DESCRIPTOR_SIZE * prev;
         Descriptor {
-            addr: dram.read64(entity) - DRAM_ADDRESS_START,
+            addr: dram.read64(entity) - self.dram_base_addr,
             len: dram.read32(entity.wrapping_add(8)),
             flags: dram.read16(entity.wrapping_add(12)),
             next: (dram.read16(entity.wrapping_add(14)) as u64) % queue_size,
