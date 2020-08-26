@@ -13,6 +13,13 @@ use crate::tty::*;
 // for nuttx
 // --------------------------------------------------------
 // https://bitbucket.org/nuttx/nuttx/src/master/arch/risc-v/src/fe310/hardware/fe310_memorymap.h
+
+const DEBUG_ADDRESS_START: u64 = 0x0000_0000;
+const DEBUG_ADDRESS_END: u64 = 0x0000_0FFF;
+
+const ERROR_DEVICE_ADDRESS_START: u64 = 0x0000_3000;
+const ERROR_DEVICE_ADDRESS_END: u64 = 0x0000_3FFF;
+
 const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
 
@@ -34,14 +41,19 @@ const UART1_ADDRESS_END: u64 = 0x1002_3FFF;
 const SPIFLASH_ADDRESS_START: u64 = 0x2000_0000;
 const SPIFLASH_ADDRESS_END: u64 = 0x3FFF_FFFF;
 
-const DRAM_ADDRESS_START: u64 = 0x8000_0000;
+const DTIM_ADDRESS_START: u64 = 0x8000_0000;
+const DTIM_ADDRESS_END: u64 = 0x8000_3FFF;
 
-const MAX_DRAM_SIZE: usize = 1024 * 1024 * 128;
-const MAX_FLASH_SIZE: usize = 1024 * 1024 * 512;
+const DEBUG_SIZE: usize = 0x1000;
+const ERROR_DEVICE_SIZE: usize = 0x8000;
+const DTIM_SIZE: usize = 0x4000;
+const FLASH_SIZE: usize = 1024 * 1024 * 512;
 
 pub struct BusFe310 {
     clock: u64,
-    dram: Memory,
+    debug: Memory,
+    error_device: Memory,
+    dtim: Memory,
     flash: Memory,
     timer: Box<dyn Timer>,
     intc: Box<dyn Intc>,
@@ -55,8 +67,10 @@ impl BusFe310 {
     pub fn new(tty: Box<dyn Tty>) -> Self {
         Self {
             clock: 0,
-            dram: Memory::new(MAX_DRAM_SIZE),
-            flash: Memory::new(MAX_FLASH_SIZE),
+            debug: Memory::new(DEBUG_SIZE),
+            error_device: Memory::new(ERROR_DEVICE_SIZE),
+            dtim: Memory::new(DTIM_SIZE),
+            flash: Memory::new(FLASH_SIZE),
             timer: Box::new(Clint::new()),
             intc: Box::new(Plic::new()),
             uart0: Fe310Uart::new(tty),
@@ -70,10 +84,10 @@ impl BusFe310 {
 impl Bus for BusFe310 {
     fn set_device_data(&mut self, device: Device, data: Vec<u8>) {
         match device {
-            Device::Dram => {
-                self.dram.initialize(data);
-            },
-            _ => panic!("Unexpected device: {:?}", device)
+            Device::SpiFlash => {
+                self.flash.initialize(data);
+            }
+            _ => panic!("Unexpected device: {:?}", device),
         }
     }
 
@@ -83,11 +97,16 @@ impl Bus for BusFe310 {
         self.timer.tick();
         self.prci.tick();
         self.gpio.tick();
+        self.uart0.tick();
+        self.uart1.tick();
 
         // TODO:!!!
         let mut interrupts: Vec<usize> = Vec::new();
         if self.uart0.is_irq() {
-            interrupts.push(10); // Interrupt ID for UART0
+            interrupts.push(3); // Interrupt ID for UART0
+        }
+        if self.uart1.is_irq() {
+            interrupts.push(4); // Interrupt ID for UART1
         }
         self.intc.tick(0, interrupts)
     }
@@ -102,17 +121,17 @@ impl Bus for BusFe310 {
 
     fn get_base_address(&mut self, device: Device) -> u64 {
         match device {
-            Device::Dram => DRAM_ADDRESS_START,
             Device::SpiFlash => SPIFLASH_ADDRESS_START,
             _ => panic!("Unexpected device: {:?}", device),
         }
     }
 
     fn read8(&mut self, addr: u64) -> Result<u8, ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read8(addr - DRAM_ADDRESS_START));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read8(addr)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.read8(addr))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -122,15 +141,17 @@ impl Bus for BusFe310 {
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.read8(addr - SPIFLASH_ADDRESS_START))
             }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => Ok(self.dtim.read8(addr - DTIM_ADDRESS_START)),
             _ => Err(()),
         }
     }
 
     fn read16(&mut self, addr: u64) -> Result<u16, ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read16(addr - DRAM_ADDRESS_START));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read16(addr)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.read16(addr))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -140,15 +161,19 @@ impl Bus for BusFe310 {
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.read16(addr - SPIFLASH_ADDRESS_START))
             }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => {
+                Ok(self.dtim.read16(addr - DTIM_ADDRESS_START))
+            }
             _ => Err(()),
         }
     }
 
     fn read32(&mut self, addr: u64) -> Result<u32, ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read32(addr - DRAM_ADDRESS_START));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read32(addr)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.read32(addr))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.read(addr - TIMER_ADDRESS_START))
             }
@@ -164,15 +189,19 @@ impl Bus for BusFe310 {
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.read32(addr - SPIFLASH_ADDRESS_START))
             }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => {
+                Ok(self.dtim.read32(addr - DTIM_ADDRESS_START))
+            }
             _ => Err(()),
         }
     }
 
     fn read64(&mut self, addr: u64) -> Result<u64, ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read64(addr - DRAM_ADDRESS_START));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read64(addr)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.read64(addr))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 let data = self.timer.read(timer_addr) as u64
@@ -212,15 +241,19 @@ impl Bus for BusFe310 {
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.read64(addr - SPIFLASH_ADDRESS_START))
             }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => {
+                Ok(self.dtim.read64(addr - DTIM_ADDRESS_START))
+            }
             _ => Err(()),
         }
     }
 
     fn write8(&mut self, addr: u64, data: u8) -> Result<(), ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write8(addr - DRAM_ADDRESS_START, data));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write8(addr, data)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.write8(addr, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -230,15 +263,19 @@ impl Bus for BusFe310 {
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.write8(addr - SPIFLASH_ADDRESS_START, data))
             }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => {
+                Ok(self.dtim.write8(addr - DTIM_ADDRESS_START, data))
+            }
             _ => Err(()),
         }
     }
 
     fn write16(&mut self, addr: u64, data: u16) -> Result<(), ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write16(addr - DRAM_ADDRESS_START, data));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write16(addr, data)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.write16(addr, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -248,15 +285,19 @@ impl Bus for BusFe310 {
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.write16(addr - SPIFLASH_ADDRESS_START, data))
             }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => {
+                Ok(self.dtim.write16(addr - DTIM_ADDRESS_START, data))
+            }
             _ => Err(()),
         }
     }
 
     fn write32(&mut self, addr: u64, data: u32) -> Result<(), ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write32(addr - DRAM_ADDRESS_START, data));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write32(addr, data)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.write32(addr, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.write(addr - TIMER_ADDRESS_START, data))
             }
@@ -278,15 +319,19 @@ impl Bus for BusFe310 {
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.write32(addr - SPIFLASH_ADDRESS_START, data))
             }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => {
+                Ok(self.dtim.write32(addr - DTIM_ADDRESS_START, data))
+            }
             _ => Err(()),
         }
     }
 
     fn write64(&mut self, addr: u64, data: u64) -> Result<(), ()> {
-        if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write64(addr - DRAM_ADDRESS_START, data));
-        }
         match addr {
+            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write64(addr, data)),
+            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
+                Ok(self.error_device.write64(addr, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 self.timer.write(timer_addr, data as u32);
@@ -343,6 +388,9 @@ impl Bus for BusFe310 {
             }
             SPIFLASH_ADDRESS_START..=SPIFLASH_ADDRESS_END => {
                 Ok(self.flash.write64(addr - SPIFLASH_ADDRESS_START, data))
+            }
+            DTIM_ADDRESS_START..=DTIM_ADDRESS_END => {
+                Ok(self.dtim.write64(addr - DTIM_ADDRESS_START, data))
             }
             _ => Err(()),
         }

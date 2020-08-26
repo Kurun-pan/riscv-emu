@@ -31,6 +31,10 @@ pub struct Gpio {
     low_ie: u32,
     /// Low interrupt pending
     low_ip: u32,
+    /// 
+    iof_en: u32,
+    /// 
+    iof_sel: u32,
     /// Output XOR (invert)
     out_xor: u32,
 }
@@ -52,6 +56,8 @@ impl Gpio {
             high_ip: 0,
             low_ie: 0,
             low_ip: 0,
+            iof_en: 0,
+            iof_sel: 0,
             out_xor: 0,
         }
     }
@@ -80,6 +86,8 @@ impl Gpio {
             0x2c => self.high_ip,
             0x30 => self.low_ie,
             0x34 => self.low_ip,
+            0x38 => self.iof_en,
+            0x3c => self.iof_sel,
             0x40 => self.out_xor,
             n => panic!("Read reserved address: {:x}", n),
         }
@@ -101,6 +109,8 @@ impl Gpio {
             0x2c => self.high_ip &= !data, // clear interrupt when 1 is written
             0x30 => self.low_ie = data,
             0x34 => self.low_ip &= !data, // clear interrupt when 1 is written
+            0x38 => self.iof_en = data,
+            0x3c => self.iof_sel = data,
             0x40 => self.out_xor = data,
             n => panic!("Write reserved address: {:x}", n),
         }

@@ -64,11 +64,12 @@ impl Fe310Uart {
             }
         }
         // transmitter
-        if (self.cycle & 0xf) == 0 && (self.txctrl & BIT_TXEN > 0) {
+        if (self.cycle & 0xf) == 0 && (self.txctrl & BIT_TXEN > 0) && (self.txdata & 0x8000_0000 > 0) {
             self.tty.putchar((self.txdata & 0xff) as u8);
             if (self.ie & BIT_TXWM) > 0 {
                 self.ip |= BIT_TXWM;
             }
+            self.txdata = 0;
         }
     }
 
@@ -91,7 +92,7 @@ impl Fe310Uart {
 
     pub fn write(&mut self, addr: u64, data: u32) {
         match addr & 0xff {
-            0x00 => self.txdata = data & 0xff,
+            0x00 => self.txdata = data & 0xff | 0x8000_0000,
             0x08 => self.txctrl = data & 0x7_0003,
             0x0C => self.rxctrl = data & 0x7_0001,
             0x10 => self.ie = data & 0x3,

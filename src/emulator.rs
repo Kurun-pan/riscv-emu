@@ -2,10 +2,10 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
+use crate::bus::bus::Device;
 use crate::cpu::cpu::{Cpu, Xlen};
 use crate::elf_loader::{EMachine, EiClass, ElfLoader, ShType};
 use crate::tty::Tty;
-use crate::bus::bus::Device;
 
 pub struct Emulator {
     cpu: Cpu,
@@ -83,8 +83,14 @@ impl Emulator {
             }
         }
 
+        let target_device_addr;
+        if cfg!(feature = "nuttx") {
+            target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::SpiFlash);
+        } else {
+            target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::Dram);
+        }
         for i in 0..progbits_sec_headers.len() {
-            if !((progbits_sec_headers[i].sh_addr >= self.cpu.mmu.get_bus().get_base_address(Device::Dram))
+            if !((progbits_sec_headers[i].sh_addr >= target_device_addr)
                 && progbits_sec_headers[i].sh_offset > 0)
             {
                 continue;
