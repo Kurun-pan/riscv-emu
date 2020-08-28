@@ -66,20 +66,17 @@ impl Cpu {
     }
 
     pub fn tick(&mut self) {
-        match self.wfi {
-            true => return,
-            _ => {}
-        };
-
         match self.check_interrupts() {
             Some(interrupt) => self.interrupt_handler(interrupt),
             None => {}
         }
 
-        let instruction_addr = self.pc;
-        match self.tick_execute() {
-            Ok(()) => {}
-            Err(e) => self.catch_exception(e, instruction_addr),
+        if !self.wfi {
+            let instruction_addr = self.pc;
+            match self.tick_execute() {
+                Ok(()) => {}
+                Err(e) => self.catch_exception(e, instruction_addr),
+            }
         }
 
         // run peripherals.
@@ -213,6 +210,7 @@ impl Cpu {
         let mie = self.csr.read_direct(CSR_MIE);
         let mip = self.csr.read_direct(CSR_MIP);
         let cause = mie & mip & 0xfff;
+        //println!("mie: {:x}, mip: {:x}", mie, mip);
 
         // Check in order of priority.
         if cause & CSR_IP_MEIP > 0 && self.select_handling_interrupt(Interrupt::MachineExternal) {
