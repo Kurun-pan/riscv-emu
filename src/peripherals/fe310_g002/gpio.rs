@@ -1,5 +1,5 @@
 // GPIO
-// https://sifive.cdn.prismic.io/sifive%2F9ecbb623-7c7f-4acc-966f-9bb10ecdb62e_fe310-g002.pdf
+// https://static.dev.sifive.com/FE310-G000.pdf
 // https://bitbucket.org/nuttx/nuttx/src/master/arch/risc-v/src/fe310/fe310_gpio.c
 
 pub struct Gpio {
