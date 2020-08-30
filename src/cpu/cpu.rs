@@ -2,7 +2,7 @@ use crate::cpu::cpu_csr::*;
 use crate::cpu::cpu_instruction::{unsigned, Opecode, OPECODES};
 use crate::cpu::cpu_instruction_comp::*;
 use crate::cpu::trap::*;
-use crate::mmu::Mmu;
+use crate::cpu::mmu::Mmu;
 use crate::tty::Tty;
 
 #[derive(Clone)]
