@@ -3,7 +3,7 @@ use crate::cpu::trap::*;
 use crate::bus::bus::Bus;
 use crate::bus::bus_fe310::BusFe310;
 use crate::bus::bus_fu540::BusFu540;
-use crate::tty::Tty;
+use crate::console::Console;
 use std::collections::HashMap;
 
 const PAGE_SIZE: u64 = 4096;
@@ -48,12 +48,12 @@ enum MemoryAccessType {
 }
 
 impl Mmu {
-    pub fn new(_xlen: Xlen, tty: Box<dyn Tty>) -> Self {
+    pub fn new(_xlen: Xlen, console: Box<dyn Console>) -> Self {
         Mmu {
             #[cfg(not(feature="nuttx"))]
-            bus: Box::new(BusFu540::new(tty)),
+            bus: Box::new(BusFu540::new(console)),
             #[cfg(feature="nuttx")]
-            bus: Box::new(BusFe310::new(tty)),
+            bus: Box::new(BusFe310::new(console)),
             xlen: _xlen,
             ppn: 0,
             addressing_mode: AddressingMode::Bare,

@@ -5,7 +5,7 @@ use std::path::Path;
 use crate::bus::bus::Device;
 use crate::cpu::cpu::{Cpu, Xlen};
 use crate::elf_loader::{EMachine, EiClass, ElfLoader, ShType};
-use crate::tty::Tty;
+use crate::console::Console;
 
 pub struct Emulator {
     cpu: Cpu,
@@ -14,7 +14,7 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new(tty: Box<dyn Tty>, testmode_: bool) -> Emulator {
+    pub fn new(tty: Box<dyn Console>, testmode_: bool) -> Emulator {
         Self {
             cpu: Cpu::new(tty, testmode_),
             testmode: testmode_,

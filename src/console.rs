@@ -3,17 +3,17 @@ extern crate pancurses;
 use self::pancurses::*;
 use std::str;
 
-pub trait Tty {
+pub trait Console {
     fn putchar(&mut self, c: u8);
     fn getchar(&mut self) -> u8;
 }
 
-pub struct Tty0 {
+pub struct Tty {
     window: Window,
     in_esc_sequences: bool,
 }
 
-impl Tty0 {
+impl Tty {
     pub fn new() -> Self {
         let w = initscr();
         w.keypad(true);
@@ -21,14 +21,14 @@ impl Tty0 {
         w.nodelay(true);
         curs_set(0);
         noecho();
-        Tty0 {
+        Tty {
             window: w,
             in_esc_sequences: false,
         }
     }
 }
 
-impl Tty for Tty0 {
+impl Console for Tty {
     fn putchar(&mut self, c: u8) {
         let str = vec![c];
 
@@ -83,7 +83,7 @@ impl TtyDummy {
     }
 }
 
-impl Tty for TtyDummy {
+impl Console for TtyDummy {
     fn putchar(&mut self, _c: u8) {}
 
     fn getchar(&mut self) -> u8 {

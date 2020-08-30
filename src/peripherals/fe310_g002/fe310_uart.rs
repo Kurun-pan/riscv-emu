@@ -1,7 +1,7 @@
 // FE310 UART Device
 // https://static.dev.sifive.com/FE310-G000.pdf
 
-use crate::tty::Tty;
+use crate::console::Console;
 
 const UART_TXEN: u32 = 0x1;
 const UART_RXEN: u32 = 0x1;
@@ -29,13 +29,13 @@ pub struct Fe310Uart {
     /// transmitter FIFO
     t_fifo: Vec<u8>,
     /// Terminal for serial console.
-    tty: Box<dyn Tty>,
+    console: Box<dyn Console>,
     /// current clock cycle.
     cycle: u64,
 }
 
 impl Fe310Uart {
-    pub fn new(tty_: Box<dyn Tty>) -> Self {
+    pub fn new(console_: Box<dyn Console>) -> Self {
         Fe310Uart {
             txdata: 0,
             rxdata: 0x8000_0000,
@@ -46,7 +46,7 @@ impl Fe310Uart {
             div: 0,
             r_fifo: Vec::new(),
             t_fifo: Vec::new(),
-            tty: tty_,
+            console: console_,
             cycle: 0,
         }
     }
@@ -60,7 +60,7 @@ impl Fe310Uart {
         // receiver
         if (self.cycle % 0xffff) == 0 {
             if self.rxctrl & UART_RXEN > 0 {
-                match self.tty.getchar() {
+                match self.console.getchar() {
                     0 => {}
                     c => self.r_fifo.push(c),
                 }
@@ -70,7 +70,7 @@ impl Fe310Uart {
 
         // transmitter
         if (self.cycle % 0xf) == 0 && (self.txctrl & UART_TXEN > 0) && self.t_fifo.len() > 0 {
-            self.tty.putchar(self.t_fifo[0] as u8);
+            self.console.putchar(self.t_fifo[0] as u8);
             self.t_fifo.remove(0);
             self.update_transmit_interrupt_status();
         }

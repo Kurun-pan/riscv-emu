@@ -1,13 +1,13 @@
 extern crate riscv_emu;
 
 use riscv_emu::emulator::Emulator;
-use riscv_emu::tty::*;
+use riscv_emu::console::*;
 
 use std::path::PathBuf;
 
 fn main() {
     let testmode = false;
-    let tty = Box::new(Tty0::new());
+    let tty = Box::new(Tty::new());
     //let testmode = true;
     //let tty = Box::new(TtyDummy::new());
     let mut emu = Emulator::new(tty, testmode);

@@ -1,3 +1,5 @@
+// for xv6
+
 use crate::bus::bus::*;
 use crate::memory::Memory;
 use crate::peripherals::fu540_c000::clint::Clint;
@@ -6,11 +8,8 @@ use crate::peripherals::intc::Intc;
 use crate::peripherals::timer::Timer;
 use crate::peripherals::uart::Uart;
 use crate::peripherals::virtio::Virtio;
-use crate::tty::*;
+use crate::console::*;
 
-// --------------------------------------------------------
-// for xv6
-// --------------------------------------------------------
 const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
 
@@ -49,13 +48,13 @@ pub struct BusFu540 {
 }
 
 impl BusFu540 {
-    pub fn new(tty: Box<dyn Tty>) -> Self {
+    pub fn new(console: Box<dyn Console>) -> Self {
         Self {
             clock: 0,
             dram: Memory::new(MAX_DRAM_SIZE),
             timer: Box::new(Clint::new()),
             intc: Box::new(Plic::new()),
-            uart: Uart::new(tty),
+            uart: Uart::new(console),
             virtio: Virtio::new(DRAM_ADDRESS_START),
         }
     }

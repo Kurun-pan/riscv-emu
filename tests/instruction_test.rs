@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::path::Path;
 
 use riscv_emu::emulator::Emulator;
-use riscv_emu::tty::TtyDummy;
+use riscv_emu::console::TtyDummy;
 
 fn _read_file(filename: &Path) -> io::Result<Vec<u8>> {
     let mut file = match File::open(&filename) {

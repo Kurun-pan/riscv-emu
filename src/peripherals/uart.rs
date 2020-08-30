@@ -1,7 +1,7 @@
 // 16550a UART Device
 // http://byterunner.com/16550.html
 
-use crate::tty::Tty;
+use crate::console::Console;
 
 const IER_DATA_READY: u8 = 0x01;
 const IER_THR_EMPTY: u8 = 0x02;
@@ -37,13 +37,13 @@ pub struct Uart {
     /// ScratchPad Register (SPR), R/W
     spr: u8,
     /// Terminal for serial console.
-    tty: Box<dyn Tty>,
+    console: Box<dyn Console>,
     /// current clock cycle.
     cycle: u64,
 }
 
 impl Uart {
-    pub fn new(tty_: Box<dyn Tty>) -> Self {
+    pub fn new(console_: Box<dyn Console>) -> Self {
         Uart {
             rhr: 0,
             thr: 0,
@@ -55,7 +55,7 @@ impl Uart {
             lsr: 0x20,
             msr: 0,
             spr: 0,
-            tty: tty_,
+            console: console_,
             cycle: 0,
         }
     }
@@ -68,7 +68,7 @@ impl Uart {
 
         // receiver
         if (self.cycle & 0xffff) == 0 && self.rhr == 0 {
-            match self.tty.getchar() {
+            match self.console.getchar() {
                 0 => {}
                 c => {
                     self.rhr = c;
@@ -80,7 +80,7 @@ impl Uart {
         }
         // transmitter
         if (self.cycle & 0xf) == 0 && self.thr != 0 {
-            self.tty.putchar(self.thr);
+            self.console.putchar(self.thr);
             self.thr = 0;
             //if (self.ier & IER_THR_EMPTY) > 0 {
             self.lsr |= LSR_THR_EMPTY;

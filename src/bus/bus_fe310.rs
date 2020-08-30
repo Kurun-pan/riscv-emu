@@ -9,7 +9,7 @@ use crate::peripherals::fu540_c000::clint::Clint;
 use crate::peripherals::fu540_c000::plic::Plic;
 use crate::peripherals::intc::Intc;
 use crate::peripherals::timer::Timer;
-use crate::tty::*;
+use crate::console::*;
 
 // TODO: implement Debug
 const _DEBUG_ADDRESS_START: u64 = 0x0000_0000;
@@ -56,14 +56,14 @@ pub struct BusFe310 {
 }
 
 impl BusFe310 {
-    pub fn new(tty: Box<dyn Tty>) -> Self {
+    pub fn new(console: Box<dyn Console>) -> Self {
         Self {
             clock: 0,
             dtim: Memory::new(DTIM_SIZE),
             flash: Memory::new(FLASH_SIZE),
             timer: Box::new(Clint::new()),
             intc: Box::new(Plic::new()),
-            uart0: Fe310Uart::new(tty),
+            uart0: Fe310Uart::new(console),
             uart1: Fe310Uart::new(Box::new(TtyDummy::new())),
             prci: Prci::new(),
             gpio: Gpio::new(),

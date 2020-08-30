@@ -3,7 +3,7 @@ use crate::cpu::cpu_instruction::{unsigned, Opecode, OPECODES};
 use crate::cpu::cpu_instruction_comp::*;
 use crate::cpu::trap::*;
 use crate::cpu::mmu::Mmu;
-use crate::tty::Tty;
+use crate::console::Console;
 
 #[derive(Clone)]
 pub enum Xlen {
@@ -32,7 +32,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(tty: Box<dyn Tty>, testmode_: bool) -> Self {
+    pub fn new(console: Box<dyn Console>, testmode_: bool) -> Self {
         let cpu = Cpu {
             pc: 0,
             wfi: false,
@@ -41,7 +41,7 @@ impl Cpu {
             x: [0; 32],
             f: [0.0; 32],
             csr: Csr::new(),
-            mmu: Mmu::new(Xlen::X64, tty),
+            mmu: Mmu::new(Xlen::X64, console),
             testmode: testmode_,
         };
         cpu
