@@ -135,25 +135,40 @@ impl Cpu {
         // set external interrupts to CSR register.
         if irqs[Privilege::Machine as usize] {
             self.csr.read_modify_write_direct(CSR_MIP, CSR_IP_MEIP, 0);
+        } else {
+            self.csr.read_modify_write_direct(CSR_MIP, 0, CSR_IP_MEIP);
         }
+
         if irqs[Privilege::Hypervisor as usize] {
             self.csr.read_modify_write_direct(CSR_MIP, CSR_IP_HEIP, 0);
+        } else {
+            self.csr.read_modify_write_direct(CSR_MIP, 0, CSR_IP_HEIP);
         }
+
         if irqs[Privilege::Supervisor as usize] {
             self.csr.read_modify_write_direct(CSR_SIP, CSR_IP_SEIP, 0);
+        } else {
+            self.csr.read_modify_write_direct(CSR_SIP, 0, CSR_IP_SEIP);
         }
+
         if irqs[Privilege::User as usize] {
             self.csr.read_modify_write_direct(CSR_UIP, CSR_IP_UEIP, 0);
+        } else {
+            self.csr.read_modify_write_direct(CSR_UIP, 0, CSR_IP_UEIP);
         }
 
         // set timer interrupt.
         if bus.is_pending_timer_interrupt(0) {
             self.csr.read_modify_write_direct(CSR_MIP, CSR_IP_MTIP, 0);
+        } else {
+            self.csr.read_modify_write_direct(CSR_MIP, 0, CSR_IP_MTIP);
         }
 
         // set software interrupt.
         if bus.is_pending_software_interrupt(0) {
             self.csr.read_modify_write_direct(CSR_MIP, CSR_IP_MSIP, 0);
+        } else {
+            self.csr.read_modify_write_direct(CSR_MIP, 0, CSR_IP_MSIP);
         }
     }
 
@@ -256,9 +271,9 @@ impl Cpu {
 
     fn interrupt_handler(&mut self, interrupt: Interrupt) {
         if self.testmode {
-            //    let mie = self.csr.read_direct(CSR_MIE);
-            //    let mip = self.csr.read_direct(CSR_MIP);
-            //    println!("mie = {:x}, mip = {:x}", mie, mip);
+            let mie = self.csr.read_direct(CSR_MIE);
+            let mip = self.csr.read_direct(CSR_MIP);
+            println!("mie = {:x}, mip = {:x}", mie, mip);
             println!(
                 "  >> Interrupt: {:?} ({:x}, {:?})",
                 interrupt, self.pc, self.privilege
@@ -273,26 +288,26 @@ impl Cpu {
         self.update_csr_trap_registers(self.pc, trap_code, self.pc, previous_privilege, true);
         self.pc = self.get_trap_next_pc();
 
-        // clear the interrupt.
-        {
-            let mip = self.csr.read_direct(CSR_MIP);
-            self.csr.write_direct(
-                CSR_MIP,
-                mip & !match interrupt {
-                    Interrupt::MachineExternal => 0x800,
-                    Interrupt::SupervisorExternal => 0x200,
-                    Interrupt::UserExternal => 0x100,
-                    Interrupt::MachineTimer => 0x080,
-                    Interrupt::SupervisorTimer => 0x020,
-                    Interrupt::UserTimer => 0x010,
-                    Interrupt::MachineSoftware => 0x008,
-                    Interrupt::SupervisorSoftware => 0x002,
-                    Interrupt::UserSoftware => 0x001,
-                },
-            );
-        }
         self.wfi = false;
     }
+
+    fn _clear_interrupt(&mut self, interrupt: Interrupt) {
+        let mip = self.csr.read_direct(CSR_MIP);
+        self.csr.write_direct(
+            CSR_MIP,
+            mip & !match interrupt {
+                Interrupt::MachineExternal => 0x800,
+                Interrupt::SupervisorExternal => 0x200,
+                Interrupt::UserExternal => 0x100,
+                Interrupt::MachineTimer => 0x080,
+                Interrupt::SupervisorTimer => 0x020,
+                Interrupt::UserTimer => 0x010,
+                Interrupt::MachineSoftware => 0x008,
+                Interrupt::SupervisorSoftware => 0x002,
+                Interrupt::UserSoftware => 0x001,
+            },
+        );
+    }    
 
     fn select_handling_interrupt(&mut self, interrupt: Interrupt) -> bool {
         let trap_code = interrupt as u8;
