@@ -1,3 +1,5 @@
+// FE310 SoC for NuttX
+
 use crate::bus::bus::*;
 use crate::memory::Memory;
 use crate::peripherals::fe310_g002::fe310_uart::Fe310Uart;
@@ -9,16 +11,9 @@ use crate::peripherals::intc::Intc;
 use crate::peripherals::timer::Timer;
 use crate::tty::*;
 
-// --------------------------------------------------------
-// for nuttx
-// --------------------------------------------------------
-// https://bitbucket.org/nuttx/nuttx/src/master/arch/risc-v/src/fe310/hardware/fe310_memorymap.h
-
-const DEBUG_ADDRESS_START: u64 = 0x0000_0000;
-const DEBUG_ADDRESS_END: u64 = 0x0000_0FFF;
-
-const ERROR_DEVICE_ADDRESS_START: u64 = 0x0000_3000;
-const ERROR_DEVICE_ADDRESS_END: u64 = 0x0000_3FFF;
+// TODO: implement Debug
+const _DEBUG_ADDRESS_START: u64 = 0x0000_0000;
+const _DEBUG_ADDRESS_END: u64 = 0x0000_0FFF;
 
 const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
@@ -41,18 +36,15 @@ const UART1_ADDRESS_END: u64 = 0x1002_3FFF;
 const SPIFLASH_ADDRESS_START: u64 = 0x2000_0000;
 const SPIFLASH_ADDRESS_END: u64 = 0x3FFF_FFFF;
 
+// SRAM for .bss
 const DTIM_ADDRESS_START: u64 = 0x8000_0000;
 const DTIM_ADDRESS_END: u64 = 0x8000_3FFF;
 
-const DEBUG_SIZE: usize = 0x1000;
-const ERROR_DEVICE_SIZE: usize = 0x8000;
 const DTIM_SIZE: usize = 0x4000;
 const FLASH_SIZE: usize = 1024 * 1024 * 512;
 
 pub struct BusFe310 {
     clock: u64,
-    debug: Memory,
-    error_device: Memory,
     dtim: Memory,
     flash: Memory,
     timer: Box<dyn Timer>,
@@ -67,8 +59,6 @@ impl BusFe310 {
     pub fn new(tty: Box<dyn Tty>) -> Self {
         Self {
             clock: 0,
-            debug: Memory::new(DEBUG_SIZE),
-            error_device: Memory::new(ERROR_DEVICE_SIZE),
             dtim: Memory::new(DTIM_SIZE),
             flash: Memory::new(FLASH_SIZE),
             timer: Box::new(Clint::new()),
@@ -100,7 +90,6 @@ impl Bus for BusFe310 {
         self.uart0.tick();
         self.uart1.tick();
 
-        // TODO:!!!
         let mut interrupts: Vec<usize> = Vec::new();
         if self.uart0.is_irq() {
             interrupts.push(3); // Interrupt ID for UART0
@@ -128,10 +117,6 @@ impl Bus for BusFe310 {
 
     fn read8(&mut self, addr: u64) -> Result<u8, ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read8(addr)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.read8(addr))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -148,10 +133,6 @@ impl Bus for BusFe310 {
 
     fn read16(&mut self, addr: u64) -> Result<u16, ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read16(addr)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.read16(addr))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -170,10 +151,6 @@ impl Bus for BusFe310 {
 
     fn read32(&mut self, addr: u64) -> Result<u32, ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read32(addr)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.read32(addr))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.read(addr - TIMER_ADDRESS_START))
             }
@@ -198,10 +175,6 @@ impl Bus for BusFe310 {
 
     fn read64(&mut self, addr: u64) -> Result<u64, ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.read64(addr)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.read64(addr))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 let data = self.timer.read(timer_addr) as u64
@@ -250,10 +223,6 @@ impl Bus for BusFe310 {
 
     fn write8(&mut self, addr: u64, data: u8) -> Result<(), ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write8(addr, data)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.write8(addr, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -272,10 +241,6 @@ impl Bus for BusFe310 {
 
     fn write16(&mut self, addr: u64, data: u16) -> Result<(), ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write16(addr, data)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.write16(addr, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             PRCI_ADDRESS_START..=PRCI_ADDRESS_END => panic!("Unexpected size access."),
@@ -294,10 +259,6 @@ impl Bus for BusFe310 {
 
     fn write32(&mut self, addr: u64, data: u32) -> Result<(), ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write32(addr, data)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.write32(addr, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.write(addr - TIMER_ADDRESS_START, data))
             }
@@ -328,10 +289,6 @@ impl Bus for BusFe310 {
 
     fn write64(&mut self, addr: u64, data: u64) -> Result<(), ()> {
         match addr {
-            DEBUG_ADDRESS_START..=DEBUG_ADDRESS_END => Ok(self.debug.write64(addr, data)),
-            ERROR_DEVICE_ADDRESS_START..=ERROR_DEVICE_ADDRESS_END => {
-                Ok(self.error_device.write64(addr, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 self.timer.write(timer_addr, data as u32);
