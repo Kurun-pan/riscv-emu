@@ -89,6 +89,8 @@ impl Emulator {
         } else {
             target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::Dram);
         }
+
+        let program_headers = loader.get_program_header(&elf_header);
         for i in 0..progbits_sec_headers.len() {
             if !((progbits_sec_headers[i].sh_addr >= target_device_addr)
                 && progbits_sec_headers[i].sh_offset > 0)
@@ -96,13 +98,17 @@ impl Emulator {
                 continue;
             }
 
+            let mut p_addr = progbits_sec_headers[i].sh_addr;
+            for k in 0..program_headers.len() {
+                if progbits_sec_headers[i].sh_addr == program_headers[k].p_vaddr {
+                    p_addr = program_headers[k].p_paddr;
+                    break;
+                }
+            }
+
             for j in 0..progbits_sec_headers[i].sh_size {
                 let data = loader.read8((progbits_sec_headers[i].sh_offset + j) as usize);
-                match self
-                    .cpu
-                    .mmu
-                    .write8(progbits_sec_headers[i].sh_addr + j as u64, data)
-                {
+                match self.cpu.mmu.write8(p_addr + j as u64, data) {
                     Err(e) => panic!("{:?}", e.exception),
                     _ => {}
                 }

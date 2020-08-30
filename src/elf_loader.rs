@@ -24,6 +24,17 @@ pub struct ElfHeader {
     pub e_shstrndx: u16,
 }
 
+pub struct ProgramHeader {
+    pub p_type: u32,
+    pub p_flags: u32,
+    pub p_offset: u64,
+    pub p_vaddr: u64,
+    pub p_paddr: u64,
+    pub p_filesz: u64,
+    pub p_memsz: u64,
+    pub p_alignz: u64,
+}
+
 pub struct SectionHeader {
     pub sh_name: u32,
     pub sh_type: ShType,
@@ -39,28 +50,28 @@ pub struct SectionHeader {
 
 #[derive(Debug)]
 pub enum ShType {
-    Null = 0x0,           // Section header table entry unused
-    Progbits = 0x1,       // Program data (.text, data, etc)
-    Sysmtab = 0x2,        // Symbol table
-    Strtab = 0x3,         // String table
-    Rela = 0x4,           // Relocation entries with addends
-    Hash = 0x5,           // Symbol hash table
-    Dynamic = 0x6,        // Dynamic linking information
-    Note = 0x7,           // Notes
-    Nobits = 0x8,         // Program space with no data (bss)
-    Rel = 0x9,            // Relocation entries, no addends
-    Shlib = 0xA,          // Reserved
-    Dynsym = 0xB,         // Dynamic linker symbol table
-    InitArray = 0xE,      // Array of constructors
-    FiniArray = 0xF,      // Array of destructors
-    PreinitArray = 0x10,  // Array of pre-constructors
-    Group = 0x11,         // Section group
-    SymtabShndx = 0x12,   // Extended section indices
-    Num = 0x13,           // Number of defined types
-    Loproc = 0x70000000,  //
-    Hiproc = 0x7F000000,  //
-    Louser = 0x80000000,  //
-    Hiuser = 0xFFFFFFFF,  //
+    Null = 0x0,          // Section header table entry unused
+    Progbits = 0x1,      // Program data (.text, data, etc)
+    Sysmtab = 0x2,       // Symbol table
+    Strtab = 0x3,        // String table
+    Rela = 0x4,          // Relocation entries with addends
+    Hash = 0x5,          // Symbol hash table
+    Dynamic = 0x6,       // Dynamic linking information
+    Note = 0x7,          // Notes
+    Nobits = 0x8,        // Program space with no data (bss)
+    Rel = 0x9,           // Relocation entries, no addends
+    Shlib = 0xA,         // Reserved
+    Dynsym = 0xB,        // Dynamic linker symbol table
+    InitArray = 0xE,     // Array of constructors
+    FiniArray = 0xF,     // Array of destructors
+    PreinitArray = 0x10, // Array of pre-constructors
+    Group = 0x11,        // Section group
+    SymtabShndx = 0x12,  // Extended section indices
+    Num = 0x13,          // Number of defined types
+    Loproc = 0x70000000, //
+    Hiproc = 0x7F000000, //
+    Louser = 0x80000000, //
+    Hiuser = 0xFFFFFFFF, //
 }
 
 #[derive(Debug)]
@@ -147,28 +158,28 @@ pub enum EType {
 
 #[derive(Debug)]
 pub enum EMachine {
-    None,        // Unknown machine
-    M32,         // AT&T WE 32100
-    SPARC,       // SPARC
-    X86,         // x86
-    M68K,        // Motorola 68000
-    M88K,        // Motorola 88000
-    I486,        // Intel 80486
-    I860,        // Intel 80860
-    MIPS,        // MIPS R3000 Big-Endian only
-    MipsRs4Be,   // MIPS R4000 Big-Endian
-    PARISC,      // HPPA
-    I960,        // Intel 80960
-    PPC,         // PowerPC
-    PPC64,       // PowerPC 64-bit
-    S390,        // S390 including S390x
-    ARM,         // ARM (up to ARMv7)
-    SUPERH,      // SuperH
-    IA64,        // IA-64,
-    AMD64,       // amd64,
-    TMS320,      // TMS320C5000 Family
-    ARM64,       // ARM 64-bit
-    RISCV,       // RISC-V
+    None,      // Unknown machine
+    M32,       // AT&T WE 32100
+    SPARC,     // SPARC
+    X86,       // x86
+    M68K,      // Motorola 68000
+    M88K,      // Motorola 88000
+    I486,      // Intel 80486
+    I860,      // Intel 80860
+    MIPS,      // MIPS R3000 Big-Endian only
+    MipsRs4Be, // MIPS R4000 Big-Endian
+    PARISC,    // HPPA
+    I960,      // Intel 80960
+    PPC,       // PowerPC
+    PPC64,     // PowerPC 64-bit
+    S390,      // S390 including S390x
+    ARM,       // ARM (up to ARMv7)
+    SUPERH,    // SuperH
+    IA64,      // IA-64,
+    AMD64,     // amd64,
+    TMS320,    // TMS320C5000 Family
+    ARM64,     // ARM 64-bit
+    RISCV,     // RISC-V
 }
 
 #[derive(Debug)]
@@ -340,6 +351,37 @@ impl ElfLoader {
             e_shnum: e_shnum,
             e_shstrndx: e_shstrndx,
         }
+    }
+
+    pub fn get_program_header(&self, elf_header: &ElfHeader) -> Vec<ProgramHeader> {
+        let mut phs = Vec::new();
+        for i in 0..elf_header.e_phnum {
+            let offset = elf_header.e_phoff as usize + ((elf_header.e_phentsize * i) as usize);
+
+            phs.push(match elf_header.e_indent.ei_classs {
+                EiClass::Class32 => ProgramHeader {
+                    p_type: self.read32(offset),
+                    p_offset: self.read32(offset + 4) as u64,
+                    p_vaddr: self.read32(offset + 8) as u64,
+                    p_paddr: self.read32(offset + 12) as u64,
+                    p_filesz: self.read32(offset + 16) as u64,
+                    p_memsz: self.read32(offset + 20) as u64,
+                    p_flags: self.read32(offset + 24),
+                    p_alignz: self.read32(offset + 28) as u64,
+                },
+                _ => ProgramHeader {
+                    p_type: self.read32(offset),
+                    p_flags: self.read32(offset + 4),
+                    p_offset: self.read64(offset + 8),
+                    p_vaddr: self.read64(offset + 16),
+                    p_paddr: self.read64(offset + 24),
+                    p_filesz: self.read64(offset + 32),
+                    p_memsz: self.read64(offset + 40),
+                    p_alignz: self.read64(offset + 48),
+                },
+            });
+        }
+        phs
     }
 
     pub fn get_section_header(&self, elf_header: &ElfHeader) -> Vec<SectionHeader> {
