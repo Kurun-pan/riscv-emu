@@ -15,7 +15,7 @@ $ cargo run --release --features nuttx
 ### xv6
 
 ```
-cargo run --release --features xv6
+$ cargo run --release --features xv6
 ```
 
 ![animation](./demo/xv6-riscv.gif)
