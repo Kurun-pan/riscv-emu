@@ -1,7 +1,7 @@
 // FE310 SoC for NuttX
 
 use crate::bus::bus::*;
-use crate::memory::Memory;
+use crate::peripherals::memory::Memory;
 use crate::peripherals::fe310_g002::fe310_uart::Fe310Uart;
 use crate::peripherals::fe310_g002::gpio::Gpio;
 use crate::peripherals::fe310_g002::prci::Prci;

@@ -1,7 +1,7 @@
 // for xv6
 
 use crate::bus::bus::*;
-use crate::memory::Memory;
+use crate::peripherals::memory::Memory;
 use crate::peripherals::fu540_c000::clint::Clint;
 use crate::peripherals::fu540_c000::plic::Plic;
 use crate::peripherals::intc::Intc;

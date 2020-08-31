@@ -4,7 +4,7 @@
 // https://syuu1228.github.io/howto_implement_hypervisor/part12.html
 // https://syuu1228.github.io/howto_implement_hypervisor/part20.html
 
-use crate::memory::Memory;
+use crate::peripherals::memory::Memory;
 
 const CONFIG_QUEUE_NUM_MAX: u32 = 0x16;
 const CONFIG_DISK_SECTOR_SIZE: u64 = 512;

@@ -5,7 +5,6 @@ extern crate memmap;
 pub mod emulator;
 pub mod console;
 pub mod cpu;
-pub mod memory;
 pub mod bus;
 pub mod elf_loader;
 pub mod peripherals;
