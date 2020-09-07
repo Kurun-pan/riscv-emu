@@ -37,7 +37,7 @@ impl Timer for Clint {
 
         // TODO: Correctly care for the clock frequency (1MHz clock @ RTCCLK).
         // The current settings have no reason.
-        if self.cycle & 0xf > 0 {
+        if self.cycle % 0xfffff == 0 {
             self.mtime = self.mtime.wrapping_add(1);
         }
     }
