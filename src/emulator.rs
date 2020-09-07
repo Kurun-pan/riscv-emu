@@ -3,20 +3,23 @@ use std::io::Read;
 use std::path::Path;
 
 use crate::bus::bus::Device;
+use crate::console::Console;
 use crate::cpu::cpu::{Cpu, Xlen};
 use crate::elf_loader::{EMachine, EiClass, ElfLoader, ShType};
-use crate::console::Console;
+use crate::machine::Machine;
 
 pub struct Emulator {
     cpu: Cpu,
+    machine: Machine,
     testmode: bool,
     tohost: u64,
 }
 
 impl Emulator {
-    pub fn new(tty: Box<dyn Console>, testmode_: bool) -> Emulator {
+    pub fn new(machine_: Machine, tty: Box<dyn Console>, testmode_: bool) -> Emulator {
         Self {
-            cpu: Cpu::new(tty, testmode_),
+            cpu: Cpu::new(machine_.clone(), tty, testmode_),
+            machine: machine_,
             testmode: testmode_,
             tohost: 0,
         }
@@ -84,10 +87,13 @@ impl Emulator {
         }
 
         let target_device_addr;
-        if cfg!(feature = "nuttx") {
-            target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::SpiFlash);
-        } else {
-            target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::Dram);
+        match self.machine {
+            Machine::SiFiveE =>
+            // for NuttX, FreeRTOS
+            {
+                target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::SpiFlash)
+            }
+            _ => target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::Dram),
         }
 
         let program_headers = loader.get_program_header(&elf_header);

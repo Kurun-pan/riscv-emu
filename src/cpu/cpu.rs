@@ -4,6 +4,7 @@ use crate::cpu::cpu_instruction_comp::*;
 use crate::cpu::trap::*;
 use crate::cpu::mmu::Mmu;
 use crate::console::Console;
+use crate::machine::Machine;
 
 #[derive(Clone)]
 pub enum Xlen {
@@ -32,7 +33,7 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(console: Box<dyn Console>, testmode_: bool) -> Self {
+    pub fn new(machine_: Machine, console: Box<dyn Console>, testmode_: bool) -> Self {
         let cpu = Cpu {
             pc: 0,
             wfi: false,
@@ -41,7 +42,7 @@ impl Cpu {
             x: [0; 32],
             f: [0.0; 32],
             csr: Csr::new(),
-            mmu: Mmu::new(Xlen::X64, console),
+            mmu: Mmu::new(Xlen::X64, machine_, console),
             testmode: testmode_,
         };
         cpu

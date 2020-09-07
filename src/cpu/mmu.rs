@@ -1,9 +1,10 @@
-use crate::cpu::cpu::{Privilege, Xlen};
-use crate::cpu::trap::*;
 use crate::bus::bus::Bus;
 use crate::bus::bus_fe310::BusFe310;
 use crate::bus::bus_fu540::BusFu540;
 use crate::console::Console;
+use crate::cpu::cpu::{Privilege, Xlen};
+use crate::cpu::trap::*;
+use crate::machine::Machine;
 use std::collections::HashMap;
 
 const PAGE_SIZE: u64 = 4096;
@@ -48,12 +49,13 @@ enum MemoryAccessType {
 }
 
 impl Mmu {
-    pub fn new(_xlen: Xlen, console: Box<dyn Console>) -> Self {
+    pub fn new(_xlen: Xlen, machine: Machine, console: Box<dyn Console>) -> Self {
+        let machine_bus: Box<dyn Bus> = match machine {
+            Machine::SiFiveE => Box::new(BusFe310::new(console)),
+            Machine::SiFiveU => Box::new(BusFu540::new(console)),
+        };
         Mmu {
-            #[cfg(not(feature="nuttx"))]
-            bus: Box::new(BusFu540::new(console)),
-            #[cfg(feature="nuttx")]
-            bus: Box::new(BusFe310::new(console)),
+            bus: machine_bus,
             xlen: _xlen,
             ppn: 0,
             addressing_mode: AddressingMode::Bare,
@@ -145,7 +147,7 @@ impl Mmu {
                         value: ev_addr,
                     }),
                 }
-            },
+            }
             _ => {
                 let mut data = 0 as u16;
                 for i in 0..2 {
@@ -178,7 +180,7 @@ impl Mmu {
                         value: ev_addr,
                     }),
                 }
-            },
+            }
             _ => {
                 let mut data = 0 as u32;
                 for i in 0..4 {
@@ -222,7 +224,7 @@ impl Mmu {
                         value: ev_addr,
                     }),
                 }
-            },
+            }
             _ => {
                 let mut data = 0 as u64;
                 for i in 0..8 {
@@ -272,12 +274,12 @@ impl Mmu {
                         value: ev_addr,
                     }),
                 }
-            },
+            }
             _ => {
                 for i in 0..2 {
                     match self.write8(v_addr.wrapping_add(i), ((data >> (i * 8)) & 0xff) as u8) {
                         Err(e) => return Err(e),
-                        _ => {},
+                        _ => {}
                     }
                 }
                 Ok(())
@@ -304,16 +306,16 @@ impl Mmu {
                         value: ev_addr,
                     }),
                 }
-            },
+            }
             _ => {
                 for i in 0..4 {
                     match self.write8(v_addr.wrapping_add(i), ((data >> (i * 8)) & 0xff) as u8) {
                         Err(e) => return Err(e),
-                        _ => {},
+                        _ => {}
                     }
                 }
                 Ok(())
-            },
+            }
         }
     }
 
@@ -336,12 +338,12 @@ impl Mmu {
                         value: ev_addr,
                     }),
                 }
-            },
+            }
             _ => {
                 for i in 0..8 {
                     match self.write8(v_addr.wrapping_add(i), ((data >> (i * 8)) & 0xff) as u8) {
                         Err(e) => return Err(e),
-                        _ => {},
+                        _ => {}
                     }
                 }
                 Ok(())
