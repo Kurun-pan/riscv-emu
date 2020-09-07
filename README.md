@@ -7,7 +7,8 @@
 ### NuttX
 
 ```
-$ cargo run --release --features nuttx
+$ cargo run --release
+$ ./target/release/riscv-emu -k ./artifacts/nuttx/nuttx -m SiFive_e
 ```
 
 ![animation](./demo/nuttx-riscv.gif)
@@ -15,7 +16,8 @@ $ cargo run --release --features nuttx
 ### xv6
 
 ```
-$ cargo run --release --features xv6
+$ cargo run --release
+$ ./target/release/riscv-emu -k ./artifacts/xv6/kernel -f ./artifacts/xv6/fs.img -m SiFive_u
 ```
 
 ![animation](./demo/xv6-riscv.gif)
@@ -71,7 +73,7 @@ $ cargo test
 
  - [Nuttx](https://bitbucket.org/nuttx/nuttx/src/master/)
  - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
-
+ - [FreeRTOS](https://www.freertos.org/)
 
 ## Links
 
