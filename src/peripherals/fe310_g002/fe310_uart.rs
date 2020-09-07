@@ -39,7 +39,7 @@ impl Fe310Uart {
         Fe310Uart {
             txdata: 0,
             rxdata: 0x8000_0000,
-            txctrl: 0,
+            txctrl: 0x01,
             rxctrl: 0x01,
             ie: 0,
             ip: 0,
