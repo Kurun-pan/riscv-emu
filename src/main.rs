@@ -14,9 +14,9 @@ fn main() {
     let program = args[0].clone();
 
     let mut opts = Options::new();
-    opts.optopt("k", "kernel", "Kernel image file", "hint");
-    opts.optopt("f", "filesystem", "File system image file", "hint");
-    opts.optopt("m", "machine", "Target machine", "SiFive_e|SiFive_u");
+    opts.optopt("k", "kernel", "Kernel image file", "./artifacts/xv6/kernel");
+    opts.optopt("f", "filesystem", "File system image file", "./artifacts/xv6/fs.img");
+    opts.optopt("m", "machine", "Target machine (SiFive_e|SiFive_u)", "SiFive_e");
     opts.optflag("t", "testmode", "Testmode is enabled");
     opts.optflag("h", "help", "Help message");
 
