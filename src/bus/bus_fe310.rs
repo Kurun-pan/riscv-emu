@@ -1,19 +1,21 @@
-// FE310 SoC for NuttX
+// FE310 SoC
 
 use crate::bus::bus::*;
-use crate::peripherals::memory::Memory;
+use crate::console::*;
 use crate::peripherals::fe310_g002::fe310_uart::Fe310Uart;
 use crate::peripherals::fe310_g002::gpio::Gpio;
 use crate::peripherals::fe310_g002::prci::Prci;
 use crate::peripherals::fu540_c000::clint::Clint;
 use crate::peripherals::fu540_c000::plic::Plic;
 use crate::peripherals::intc::Intc;
+use crate::peripherals::memory::Memory;
 use crate::peripherals::timer::Timer;
-use crate::console::*;
 
-// TODO: implement Debug
 const _DEBUG_ADDRESS_START: u64 = 0x0000_0000;
 const _DEBUG_ADDRESS_END: u64 = 0x0000_0FFF;
+
+const _MROM_ADDRESS_START: u64 = 0x0000_1000;
+const _MROM_ADDRESS_END: u64 = 0x0000_1FFF;
 
 const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
