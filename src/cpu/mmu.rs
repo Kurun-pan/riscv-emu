@@ -366,7 +366,7 @@ impl Mmu {
                         }),
                     },
                     Err(()) => Err(Trap {
-                        exception: Exception::LoadPageFault,
+                        exception: Exception::InstructionPageFault,
                         value: ev_addr,
                     }),
                 }
