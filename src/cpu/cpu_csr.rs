@@ -61,13 +61,13 @@ pub const CSR_HCYCLEH: u16 = 0xE80;
 pub const CSR_HTIMEH: u16 = 0xE81;
 pub const CSR_HINSTRETH: u16 = 0xE82;
 
-pub const CSR_MISA: u16 = 0xF10;
 pub const CSR_MVENDORID: u16 = 0xF11;
 pub const CSR_MARCHID: u16 = 0xF12;
 pub const CSR_MIMPID: u16 = 0xF13;
 pub const CSR_MHARTID: u16 = 0xF14;
 
 pub const CSR_MSTATUS: u16 = 0x300;
+pub const CSR_MISA: u16 = 0x301;
 pub const CSR_MEDELEG: u16 = 0x302;
 pub const CSR_MIDELEG: u16 = 0x303;
 pub const CSR_MIE: u16 = 0x304;
