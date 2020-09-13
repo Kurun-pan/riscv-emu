@@ -17,6 +17,7 @@ const VIRTIO_VENDOR_ID: u64 = 0x00c;
 const VIRTIO_DEVICE_FEATURES: u64 = 0x010;
 const VIRTIO_DEVICE_FEATURES_SEL: u64 = 0x014;
 const VIRTIO_DRIVER_FEATURES: u64 = 0x020;
+const VIRTIO_DRIVER_FEATURES_SEL: u64 = 0x024;
 const VIRTIO_GUEST_PAGE_SIZE: u64 = 0x028;
 const VIRTIO_QUEUE_SEL: u64 = 0x030;
 const VIRTIO_QUEUE_NUM_MAX: u64 = 0x034;
@@ -64,8 +65,12 @@ pub struct Virtio {
     /// Main Memory Base Address
     dram_base_addr: u64,
 
+    /// Device (host) features word selection (WO)
+    device_features_sel: u32,
     ///	Flags representing device features understood and activated by the driver (WO)
     driver_features: u32,
+    /// Activated (guest) features word selection (WO)
+    driver_features_sel: u32,
     /// Guest page size (WO)
     guest_page_size: u32,
     /// Virtual queue index (WO)
@@ -91,7 +96,9 @@ impl Virtio {
             disk_image: vec![],
             last_available_idx: 0,
             dram_base_addr: dram_base_addr_,
+            device_features_sel: 0,
             driver_features: 0,
+            driver_features_sel: 0,
             guest_page_size: 0,
             queue_sel: 0,
             queue_num: 0,
@@ -142,8 +149,9 @@ impl Virtio {
 
     pub fn write(&mut self, addr: u64, data: u32) {
         match addr {
-            VIRTIO_DEVICE_FEATURES_SEL => panic!("TODO!"),
+            VIRTIO_DEVICE_FEATURES_SEL => self.device_features_sel = data,
             VIRTIO_DRIVER_FEATURES => self.driver_features = data,
+            VIRTIO_DRIVER_FEATURES_SEL => self.driver_features_sel = data,
             VIRTIO_GUEST_PAGE_SIZE => self.guest_page_size = data,
             VIRTIO_QUEUE_SEL => self.queue_sel = data,
             VIRTIO_QUEUE_NUM => self.queue_num = data,
