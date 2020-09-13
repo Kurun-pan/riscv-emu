@@ -107,6 +107,7 @@ lazy_static! {
         m.insert(0x33, Opecode {operation: opecode_33});
         m.insert(0x37, Opecode {operation: opecode_37});
         m.insert(0x3b, Opecode {operation: opecode_3b});
+        m.insert(0x53, Opecode {operation: opecode_53});
         m.insert(0x63, Opecode {operation: opecode_63});
         m.insert(0x67, Opecode {operation: opecode_67});
         m.insert(0x6F, Opecode {operation: opecode_6f});
@@ -594,6 +595,16 @@ lazy_static! {
         });
         m
     };
+ 
+    static ref INSTRUCTIONS_GROUP53: HashMap<(u8, u8), Instruction> = {
+        let mut m = HashMap::new();
+        m.insert((0x78, 0), Instruction{
+            mnemonic: "fmv.w.x",
+            operation: fmv_w_x,
+            disassemble: disassemble_r,
+        });
+        m
+    };
 
     // Conditional Branches.
     static ref INSTRUCTIONS_GROUP63: HashMap<u8, Instruction> = {
@@ -814,6 +825,15 @@ fn opecode_3b(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
     let funct3 = ((word & 0x00007000) >> 12) as u8;
     let funct7 = ((word & 0xfe000000) >> 25) as u8;
     match INSTRUCTIONS_GROUP3B.get(&(funct7, funct3)) {
+        Some(instruction) => Ok(&instruction),
+        None => panic!("Not found instruction!"),
+    }
+}
+
+fn opecode_53(_cpu: &Cpu, _addr: u64, word: u32) -> Result<&Instruction, ()> {
+    let funct3 = ((word & 0x00007000) >> 12) as u8;
+    let funct7 = ((word & 0xfe000000) >> 25) as u8;
+    match INSTRUCTIONS_GROUP53.get(&(funct7, funct3)) {
         Some(instruction) => Ok(&instruction),
         None => panic!("Not found instruction!"),
     }
@@ -2493,5 +2513,20 @@ fn amomaxu_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
         Err(e) => return Err(e),
     };
     cpu.x[o.rd as usize] = t as i64;
+    Ok(())
+}
+
+//==============================================================================
+// Single-Precision Load and Store Instructions (RV32F/RV64D)
+//==============================================================================
+
+/// [fmv.w.x rd,rs1]
+/// FMV.W.X moves the single-precision value encoded in IEEE 754-2008 standard encoding
+/// from the lower 32 bits of integer register rs1 to the floating-point register rd.
+/// The bits are not modified in the transfer, and in particular, the payloads of 
+/// non-canonical NaNs are preserved.
+fn fmv_w_x(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
+    let o = parse_type_r(word);
+    cpu.f[o.rd as usize] = f64::from_bits(cpu.x[o.rs1 as usize] as u32 as u64);
     Ok(())
 }
