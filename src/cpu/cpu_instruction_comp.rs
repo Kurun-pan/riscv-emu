@@ -848,7 +848,7 @@ fn c_mv(word: u16) -> Result<u32, ()> {
 
 /// [c.ebreak]
 fn c_ebreak(_word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+    Ok(0x00100073)
 }
 
 /// [c.jalr rd]
