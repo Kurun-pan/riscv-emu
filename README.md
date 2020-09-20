@@ -29,6 +29,14 @@ $ cargo run --release
 $ ./target/release/riscv-emu -k ./artifacts/freertos/RTOSDemo.elf -m SiFive_e
 ```
 
+### Zephyr
+
+```
+$ cargo run --release
+$ ./target/release/riscv-emu -k ./artifacts/zephyr/zephyr.elf -m SiFive_e
+```
+
+![animation](./demo/zephyr.gif)
 
 ## Tests
 
@@ -78,10 +86,13 @@ $ cargo test
 
 ### Support OS
 
+ - [Linux]()
  - [Nuttx](https://bitbucket.org/nuttx/nuttx/src/master/)
  - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
  - [FreeRTOS](https://www.freertos.org/)
+ - [Zephyr](https://www.zephyrproject.org/)
 
 ## Links
 
 - [riscv/riscv-tests](https://github.com/riscv/riscv-tests)
+- [RISC-V - Getting Started Guide](https://risc-v-getting-started-guide.readthedocs.io/en/latest/index.html)
