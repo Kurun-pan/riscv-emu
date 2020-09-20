@@ -105,14 +105,16 @@ impl Emulator {
             }
 
             let mut p_addr = progbits_sec_headers[i].sh_addr;
+            let mut p_size = progbits_sec_headers[i].sh_size;
             for k in 0..program_headers.len() {
                 if progbits_sec_headers[i].sh_addr == program_headers[k].p_vaddr {
                     p_addr = program_headers[k].p_paddr;
+                    p_size = program_headers[k].p_filesz;
                     break;
                 }
             }
 
-            for j in 0..progbits_sec_headers[i].sh_size {
+            for j in 0..p_size {
                 let data = loader.read8((progbits_sec_headers[i].sh_offset + j) as usize);
                 match self.cpu.mmu.write8(p_addr + j as u64, data) {
                     Err(e) => panic!("{:?}", e.exception),
