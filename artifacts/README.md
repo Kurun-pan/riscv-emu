@@ -1,6 +1,6 @@
 # How to build
 
-## Install Toolchain for RISC-V
+## 1. Install Toolchain for RISC-V
 
 ```
 $ git clone --recursive https://github.com/riscv/riscv-gnu-toolchain
@@ -10,7 +10,7 @@ $ sudo make
 $ export PATH=$PATH:/opt/riscv/bin
 ```
 
-## Building NuttX
+## 2. Building NuttX
 
 ### Install kconfig-frontends
 
@@ -50,7 +50,7 @@ Add CONFIG_ARCH_CHIP_FE310_QEMU=y
 $ make
 ```
 
-## Building xv6
+## 3. Building xv6
 
 ```
 $ git clone https://github.com/mit-pdos/xv6-riscv
@@ -59,7 +59,7 @@ $ make
 $ make fs.img
 ```
 
-## Building Zephyr OS for Linux (Ubuntu 20.04)
+## 4. Building Zephyr OS for Linux (Ubuntu 20.04)
 
 ### Install packges
 
@@ -104,7 +104,7 @@ $ make -j 4
 
 `zephyr/zephyr.elf` will be generated.
 
-## Links
+## 5. Links
 
  - [Nuttx](https://bitbucket.org/nuttx/nuttx/src/master/)
  - [xv6-riscv](https://github.com/mit-pdos/xv6-riscv)
