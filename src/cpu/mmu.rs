@@ -1,6 +1,6 @@
 use crate::bus::bus::Bus;
 use crate::bus::bus_fe310::BusFe310;
-use crate::bus::bus_fu540::BusFu540;
+use crate::bus::bus_qemu_virt::BusQemuVirt;
 use crate::console::Console;
 use crate::cpu::cpu::{Privilege, Xlen};
 use crate::cpu::trap::*;
@@ -52,7 +52,8 @@ impl Mmu {
     pub fn new(_xlen: Xlen, machine: Machine, console: Box<dyn Console>) -> Self {
         let machine_bus: Box<dyn Bus> = match machine {
             Machine::SiFiveE => Box::new(BusFe310::new(console)),
-            Machine::SiFiveU => Box::new(BusFu540::new(console)),
+            Machine::SiFiveU => panic!("Now not supported!"),
+            Machine::QemuVirt => Box::new(BusQemuVirt::new(console)),
         };
         Mmu {
             bus: machine_bus,

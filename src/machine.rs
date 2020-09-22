@@ -2,4 +2,5 @@
 pub enum Machine {
     SiFiveE,
     SiFiveU,
+    QemuVirt,
 }

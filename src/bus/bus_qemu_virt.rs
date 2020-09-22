@@ -1,15 +1,26 @@
-// for xv6
+// QEMU Virt Machine
 
 use crate::bus::bus::*;
-use crate::peripherals::memory::Memory;
+use crate::console::*;
 use crate::peripherals::fu540_c000::clint::Clint;
 use crate::peripherals::fu540_c000::plic::Plic;
 use crate::peripherals::intc::Intc;
+use crate::peripherals::memory::Memory;
 use crate::peripherals::timer::Timer;
 use crate::peripherals::uart::Uart;
 use crate::peripherals::virtio::Virtio;
-use crate::console::*;
 
+// Physical memory layout
+// -------------------------------------------------
+// 00001000 -- boot ROM, provided by qemu
+// 02000000 -- CLINT
+// 0C000000 -- PLIC
+// 10000000 -- uart0
+// 10001000 -- virtio disk
+// 80000000 -- boot ROM jumps here in machine mode
+//             -kernel loads the kernel here
+// unused RAM after 80000000.
+// -------------------------------------------------
 const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
 
@@ -24,21 +35,9 @@ const VIRTIO_ADDRESS_END: u64 = 0x1000_1FFF;
 
 const DRAM_ADDRESS_START: u64 = 0x8000_0000;
 
-// Physical memory layout for xv6-riscv
-// -------------------------------------------------
-// 00001000 -- boot ROM, provided by qemu
-// 02000000 -- CLINT
-// 0C000000 -- PLIC
-// 10000000 -- uart0
-// 10001000 -- virtio disk
-// 80000000 -- boot ROM jumps here in machine mode
-//             -kernel loads the kernel here
-// unused RAM after 80000000.
-// -------------------------------------------------
-
 pub const MAX_DRAM_SIZE: usize = 1024 * 1024 * 128;
 
-pub struct BusFu540 {
+pub struct BusQemuVirt {
     clock: u64,
     dram: Memory,
     timer: Box<dyn Timer>,
@@ -47,7 +46,7 @@ pub struct BusFu540 {
     virtio: Virtio,
 }
 
-impl BusFu540 {
+impl BusQemuVirt {
     pub fn new(console: Box<dyn Console>) -> Self {
         Self {
             clock: 0,
@@ -60,16 +59,16 @@ impl BusFu540 {
     }
 }
 
-impl Bus for BusFu540 {
+impl Bus for BusQemuVirt {
     fn set_device_data(&mut self, device: Device, data: Vec<u8>) {
         match device {
             Device::Dram => {
                 self.dram.initialize(data);
-            },
+            }
             Device::Disk => {
                 self.virtio.init(data);
             }
-            _ => panic!("Unexpected device: {:?}", device)
+            _ => panic!("Unexpected device: {:?}", device),
         }
     }
 
@@ -102,7 +101,7 @@ impl Bus for BusFu540 {
     fn get_base_address(&mut self, device: Device) -> u64 {
         match device {
             Device::Dram => DRAM_ADDRESS_START,
-            _ => panic!("Unexpected device: {:?}", device)
+            _ => panic!("Unexpected device: {:?}", device),
         }
     }
 

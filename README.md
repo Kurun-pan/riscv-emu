@@ -1,8 +1,15 @@
 # riscv-emu
 
-`riscv-emu` is a RISC-V emulator that is written in Rust. xv6, NuttX and FreeRTOS are supported.
+`riscv-emu` is a RISC-V emulator that is written in Rust. xv6, NuttX, FreeRTOS and Zephyr OS are supported.
 
 ## Demo
+
+### Linux
+
+```
+$ cargo run --release
+$ ./target/release/riscv-emu -k ./artifacts/linux/fw_payload.elf -f ./artifacts/linux/busybox -m SiFive_u
+```
 
 ### NuttX
 
@@ -17,7 +24,7 @@ $ ./target/release/riscv-emu -k ./artifacts/nuttx/nuttx -m SiFive_e
 
 ```
 $ cargo run --release
-$ ./target/release/riscv-emu -k ./artifacts/xv6/kernel -f ./artifacts/xv6/fs.img -m SiFive_u
+$ ./target/release/riscv-emu -k ./artifacts/xv6/kernel -f ./artifacts/xv6/fs.img -m Qemu_virt
 ```
 
 ![animation](./demo/xv6-riscv.gif)
