@@ -88,12 +88,10 @@ impl Emulator {
 
         let target_device_addr;
         match self.machine {
-            Machine::SiFiveE =>
-            // for NuttX, FreeRTOS
-            {
-                target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::SpiFlash)
+            Machine::QemuVirt => {
+                target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::Dram)
             }
-            _ => target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::Dram),
+            _ => target_device_addr = self.cpu.mmu.get_bus().get_base_address(Device::SpiFlash),
         }
 
         let program_headers = loader.get_program_header(&elf_header);
