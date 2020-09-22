@@ -10,17 +10,9 @@ use crate::peripherals::timer::Timer;
 use crate::peripherals::uart::Uart;
 use crate::peripherals::virtio::Virtio;
 
-// Physical memory layout
-// -------------------------------------------------
-// 00001000 -- boot ROM, provided by qemu
-// 02000000 -- CLINT
-// 0C000000 -- PLIC
-// 10000000 -- uart0
-// 10001000 -- virtio disk
-// 80000000 -- boot ROM jumps here in machine mode
-//             -kernel loads the kernel here
-// unused RAM after 80000000.
-// -------------------------------------------------
+const MROM_ADDRESS_START: u64 = 0x0000_1000;
+const MROM_ADDRESS_END: u64 = 0x0000_FFFF;
+
 const TIMER_ADDRESS_START: u64 = 0x0200_0000;
 const TIMER_ADDRESS_END: u64 = 0x0200_FFFF;
 
@@ -35,10 +27,12 @@ const VIRTIO_ADDRESS_END: u64 = 0x1000_1FFF;
 
 const DRAM_ADDRESS_START: u64 = 0x8000_0000;
 
-pub const MAX_DRAM_SIZE: usize = 1024 * 1024 * 128;
+const MROM_SIZE: usize = 0xF000;
+pub const DRAM_SIZE: usize = 1024 * 1024 * 128;
 
 pub struct BusQemuVirt {
     clock: u64,
+    mrom: Memory,
     dram: Memory,
     timer: Box<dyn Timer>,
     intc: Box<dyn Intc>,
@@ -50,7 +44,8 @@ impl BusQemuVirt {
     pub fn new(console: Box<dyn Console>) -> Self {
         Self {
             clock: 0,
-            dram: Memory::new(MAX_DRAM_SIZE),
+            mrom: Memory::new(MROM_SIZE),
+            dram: Memory::new(DRAM_SIZE),
             timer: Box::new(Clint::new()),
             intc: Box::new(Plic::new()),
             uart: Uart::new(console),
@@ -110,6 +105,7 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read8(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => Ok(self.mrom.read8(addr - MROM_ADDRESS_START)),
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.read(addr - UART_ADDRESS_START)),
@@ -123,6 +119,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read16(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
+                Ok(self.mrom.read16(addr - MROM_ADDRESS_START))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
@@ -141,6 +140,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read32(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
+                Ok(self.mrom.read32(addr - MROM_ADDRESS_START))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.read(addr - TIMER_ADDRESS_START))
             }
@@ -165,6 +167,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read64(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
+                Ok(self.mrom.read64(addr - MROM_ADDRESS_START))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 let data = self.timer.read(timer_addr) as u64
@@ -204,6 +209,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write8(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
+                Ok(self.mrom.write8(addr - MROM_ADDRESS_START, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
@@ -219,6 +227,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write16(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
+                Ok(self.mrom.write16(addr - MROM_ADDRESS_START, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
@@ -238,6 +249,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write32(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
+                Ok(self.mrom.write32(addr - MROM_ADDRESS_START, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.write(addr - TIMER_ADDRESS_START, data))
             }
@@ -267,6 +281,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write64(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
+            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
+                Ok(self.mrom.write64(addr - MROM_ADDRESS_START, data))
+            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 self.timer.write(timer_addr, data as u32);
