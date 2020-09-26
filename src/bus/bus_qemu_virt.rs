@@ -28,7 +28,7 @@ const VIRTIO_ADDRESS_END: u64 = 0x1000_1FFF;
 const DRAM_ADDRESS_START: u64 = 0x8000_0000;
 
 const MROM_SIZE: usize = 0xF000;
-pub const DRAM_SIZE: usize = 1024 * 1024 * 128;
+pub const DRAM_SIZE: usize = 1024 * 1024 * 256; // todo: support command line to change size.
 
 pub struct BusQemuVirt {
     clock: u64,
@@ -209,9 +209,6 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write8(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
-            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
-                Ok(self.mrom.write8(addr - MROM_ADDRESS_START, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
@@ -227,9 +224,6 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write16(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
-            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
-                Ok(self.mrom.write16(addr - MROM_ADDRESS_START, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => {
@@ -249,9 +243,6 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write32(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
-            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
-                Ok(self.mrom.write32(addr - MROM_ADDRESS_START, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 Ok(self.timer.write(addr - TIMER_ADDRESS_START, data))
             }
@@ -281,9 +272,6 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.write64(addr - DRAM_ADDRESS_START, data));
         }
         match addr {
-            MROM_ADDRESS_START..=MROM_ADDRESS_END => {
-                Ok(self.mrom.write64(addr - MROM_ADDRESS_START, data))
-            }
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
                 let timer_addr = addr - TIMER_ADDRESS_START;
                 self.timer.write(timer_addr, data as u32);
