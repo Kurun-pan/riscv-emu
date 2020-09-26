@@ -1214,7 +1214,7 @@ fn lui(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sb rs2,offset(rs1)]
 fn sb(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
+    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u8;
     cpu.mmu.write8(addr, data)
 }
@@ -1222,7 +1222,7 @@ fn sb(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [sh rs2,offset(rs1)]
 fn sh(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
+    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     let data = cpu.x[o.rs2 as usize] as u16;
     cpu.mmu.write16(addr, data)
 }
@@ -1292,7 +1292,7 @@ fn fsw(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
 /// [fsd rs2,offset(rs1)]
 fn fsd(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
     let o = parse_type_s(word);
-    let addr = unsigned(cpu, cpu.x[o.rs1 as usize].wrapping_add(o.imm));
+    let addr = cpu.x[o.rs1 as usize].wrapping_add(o.imm) as u64;
     cpu.mmu.write64(addr, cpu.f[o.rs2 as usize].to_bits())
 }
 
