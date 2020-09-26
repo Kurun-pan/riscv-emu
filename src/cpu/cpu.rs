@@ -1,5 +1,5 @@
 use crate::cpu::cpu_csr::*;
-use crate::cpu::cpu_instruction::{unsigned, Opecode, OPECODES};
+use crate::cpu::cpu_instruction::{Opecode, OPECODES};
 use crate::cpu::cpu_instruction_comp::*;
 use crate::cpu::trap::*;
 use crate::cpu::mmu::Mmu;
@@ -21,6 +21,7 @@ pub enum Privilege {
 }
 
 pub struct Cpu {
+    cycle: u64,
     pub pc: u64,
     pub wfi: bool,
     pub xlen: Xlen,
@@ -35,6 +36,7 @@ pub struct Cpu {
 impl Cpu {
     pub fn new(machine_: Machine, console: Box<dyn Console>, testmode_: bool) -> Self {
         let cpu = Cpu {
+            cycle: 0,
             pc: 0,
             wfi: false,
             xlen: Xlen::X64,
@@ -50,6 +52,7 @@ impl Cpu {
 
     pub fn reset(&mut self) {
         self.pc = 0;
+        self.cycle = 0;
         self.privilege = Privilege::Machine;
         self.wfi = false;
         self.xlen = Xlen::X64;
@@ -86,6 +89,10 @@ impl Cpu {
 
         // handle interrupt.
         self.tick_interrupt(&irqs);
+
+        self.cycle = self.cycle.wrapping_add(1);
+        self.csr.write_direct(CSR_CYCLE, self.cycle);
+        self.csr.tick();
     }
 
     fn tick_execute(&mut self) -> Result<(), Trap> {
@@ -493,8 +500,8 @@ impl Cpu {
             Privilege::Hypervisor => CSR_HTVEC,
             Privilege::Machine => CSR_MTVEC,
         });
-        unsigned(self, self.pc as i64)
-    }
+        self.pc
+     }
 
     fn get_cause(&mut self, trap_code: u8, is_interrupt: bool) -> u64 {
         let mut cause = trap_code as u64;

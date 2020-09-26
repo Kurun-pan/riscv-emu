@@ -147,8 +147,18 @@ pub struct Csr {
 
 impl Csr {
     pub fn new() -> Self {
-        let csr = Csr { csr: [0; 4096] };
+        let mut csr = Csr { csr: [0; 4096] };
+
+        // this is actived when release mode for passing 
+        // "rv32mi-p-csr" test scenario of riscv-tests.
+        if cfg!(not(debug_assertions)) {
+            csr.csr[CSR_MISA as usize] = 0x800000008014312f;
+        }
         csr
+    }
+
+    pub fn tick(&mut self) {
+        self.csr[CSR_TIME as usize] = self.csr[CSR_TIME as usize].wrapping_add(1);
     }
 
     pub fn read(
@@ -170,6 +180,10 @@ impl Csr {
 
     pub fn read_direct(&mut self, addr: u16) -> u64 {
         match addr {
+            // User Floating-Point (FFLAGS/FRM/FCSR)
+            CSR_FFLAGS => self.csr[CSR_FCSR as usize] & 0x1f,
+            CSR_FRM => (self.csr[CSR_FCSR as usize] >> 5) & 0x7,
+
             // Restricted views of the mstatus register appear as the hstatus and
             // sstatus registers in the H and S privilege-level ISAs respectively.
             CSR_HSTATUS => panic!("TODO: HSTATUS"),
@@ -216,8 +230,8 @@ impl Csr {
             CSR_SCYCLE | CSR_STIME | CSR_SINSTRET | CSR_SCYCLEH | CSR_STIMEH | CSR_SINSTRETH => {
                 panic!("TODO: CSR STimer")
             }
-            CSR_CYCLE | CSR_TIME | CSR_INSTRET | CSR_CYCLEH | CSR_TIMEH | CSR_INSTRETH => {
-                panic!("TODO: CSR Timer")
+            CSR_INSTRET | CSR_CYCLEH | CSR_TIMEH | CSR_INSTRETH => {
+                panic!("TODO: CSR Timer: {:x}", addr);
             }
 
             _ => self.csr[addr as usize],
@@ -255,6 +269,16 @@ impl Csr {
 
     pub fn write_direct(&mut self, addr: u16, data: u64) {
         match addr {
+            // User Floating-Point (FFLAGS/FRM/FCSR)
+            CSR_FFLAGS => {
+                self.csr[CSR_FCSR as usize] &= !0x1f;
+                self.csr[CSR_FCSR as usize] |= data & 0x1f;
+            }
+            CSR_FRM => {
+                self.csr[CSR_FCSR as usize] &= !0xe0;
+                self.csr[CSR_FCSR as usize] |= (data << 5) & 0xe0;
+            }
+
             // Restricted views of the mstatus register appear as the hstatus and
             // sstatus registers in the H and S privilege-level ISAs respectively.
             CSR_HSTATUS => panic!("TODO: HSTATUS"),
@@ -302,9 +326,7 @@ impl Csr {
             CSR_SCYCLE | CSR_STIME | CSR_SINSTRET | CSR_SCYCLEH | CSR_STIMEH | CSR_SINSTRETH => {
                 panic!("TODO: CSR STimer")
             }
-            CSR_CYCLE | CSR_TIME | CSR_INSTRET | CSR_CYCLEH | CSR_TIMEH | CSR_INSTRETH => {
-                panic!("TODO: CSR Timer")
-            }
+            CSR_INSTRET | CSR_CYCLEH | CSR_TIMEH | CSR_INSTRETH => panic!("TODO: CSR Timer"),
 
             _ => self.csr[addr as usize] = data,
         }
