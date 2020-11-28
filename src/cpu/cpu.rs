@@ -35,7 +35,7 @@ pub struct Cpu {
 
 impl Cpu {
     pub fn new(machine_: Machine, console: Box<dyn Console>, testmode_: bool) -> Self {
-        let cpu = Cpu {
+        let mut cpu = Cpu {
             cycle: 0,
             pc: 0,
             wfi: false,
@@ -47,6 +47,7 @@ impl Cpu {
             mmu: Mmu::new(Xlen::X64, machine_, console),
             testmode: testmode_,
         };
+        cpu.x[0xb] = 0x1020; // initial value for Linux booting.
         cpu
     }
 
@@ -132,7 +133,7 @@ impl Cpu {
             Err(e) => return Err(e),
             _ => {}
         }
-        self.x[0] = 0; // x0 register is always zero.
+        self.x[0] = 0; // x0 is hardwired to the constant 0.
 
         return Ok(());
     }
