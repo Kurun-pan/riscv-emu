@@ -33,7 +33,7 @@ impl Emulator {
         self.cpu.set_pc(addr)
     }
 
-    pub fn set_disk_data(&mut self, filename: &Path) {
+    pub fn set_data_from_file(&mut self, device: Device, filename: &Path) {
         match File::open(&filename) {
             Ok(mut file) => {
                 let mut data = vec![];
@@ -42,7 +42,7 @@ impl Emulator {
                     _ => {}
                 };
                 let bus = self.cpu.mmu.get_bus();
-                bus.set_device_data(Device::Disk, data);
+                bus.set_device_data(device, data);
             }
             Err(why) => panic!("Falied to open {}: {}", filename.display(), why),
         };

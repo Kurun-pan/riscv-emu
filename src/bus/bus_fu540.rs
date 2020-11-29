@@ -15,6 +15,9 @@ use crate::peripherals::timer::Timer;
 const _DEBUG_ADDRESS_START: u64 = 0x0000_0000;
 const _DEBUG_ADDRESS_END: u64 = 0x0000_0FFF;
 
+const DTB_ADDRESS_START: u64 = 0x0000_1020;
+const _DTB_ADDRESS_END: u64 = 0x0000_1FFF;
+
 const _MROM_ADDRESS_START: u64 = 0x0001_0000;
 const _MROM_ADDRESS_END: u64 = 0x0001_7FFF;
 
@@ -119,6 +122,7 @@ impl Bus for BusFu540 {
         match device {
             Device::SpiFlash => SPIFLASH_ADDRESS_START,
             Device::Dram => DRAM_ADDRESS_START,
+            Device::DTB => DTB_ADDRESS_START,
             _ => panic!("Unexpected device: {:?}", device),
         }
     }

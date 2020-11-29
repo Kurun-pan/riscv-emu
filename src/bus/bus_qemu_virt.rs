@@ -10,6 +10,9 @@ use crate::peripherals::timer::Timer;
 use crate::peripherals::uart::Uart;
 use crate::peripherals::virtio::Virtio;
 
+const DTB_ADDRESS_START: u64 = 0x0000_1020;
+const DTB_ADDRESS_END: u64 = 0x0000_1FFF;
+
 const MROM_ADDRESS_START: u64 = 0x0000_1000;
 const MROM_ADDRESS_END: u64 = 0x0000_FFFF;
 
@@ -29,9 +32,11 @@ const DRAM_ADDRESS_START: u64 = 0x8000_0000;
 
 const MROM_SIZE: usize = 0xF000;
 pub const DRAM_SIZE: usize = 1024 * 1024 * 256; // todo: support command line to change size.
+const DTB_SIZE: usize = 0xfe0;
 
 pub struct BusQemuVirt {
     clock: u64,
+    dtb: Vec<u8>,
     mrom: Memory,
     dram: Memory,
     timer: Box<dyn Timer>,
@@ -44,6 +49,7 @@ impl BusQemuVirt {
     pub fn new(console: Box<dyn Console>) -> Self {
         Self {
             clock: 0,
+            dtb: vec![0; DTB_SIZE],
             mrom: Memory::new(MROM_SIZE),
             dram: Memory::new(DRAM_SIZE),
             timer: Box::new(Clint::new()),
@@ -62,6 +68,9 @@ impl Bus for BusQemuVirt {
             }
             Device::Disk => {
                 self.virtio.init(data);
+            }
+            Device::DTB => {
+                self.dtb.splice(..data.len(), data.iter().cloned());
             }
             _ => panic!("Unexpected device: {:?}", device),
         }
@@ -96,6 +105,7 @@ impl Bus for BusQemuVirt {
     fn get_base_address(&mut self, device: Device) -> u64 {
         match device {
             Device::Dram => DRAM_ADDRESS_START,
+            Device::DTB => DTB_ADDRESS_START,
             _ => panic!("Unexpected device: {:?}", device),
         }
     }
@@ -105,6 +115,9 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read8(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            DTB_ADDRESS_START..=DTB_ADDRESS_END => {
+                Ok(self.dtb[(addr - DTB_ADDRESS_START) as usize])
+            }
             MROM_ADDRESS_START..=MROM_ADDRESS_END => Ok(self.mrom.read8(addr - MROM_ADDRESS_START)),
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
@@ -119,6 +132,10 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read16(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            DTB_ADDRESS_START..=DTB_ADDRESS_END => {
+                Ok(self.dtb[(addr - DTB_ADDRESS_START) as usize] as u16
+                    | ((self.dtb[(addr.wrapping_add(1) - DTB_ADDRESS_START) as usize]) as u16) << 8)
+            }
             MROM_ADDRESS_START..=MROM_ADDRESS_END => {
                 Ok(self.mrom.read16(addr - MROM_ADDRESS_START))
             }
@@ -140,6 +157,15 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read32(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            DTB_ADDRESS_START..=DTB_ADDRESS_END => {
+                Ok((self.dtb[(addr - DTB_ADDRESS_START) as usize] as u32)
+                    | (((self.dtb[(addr.wrapping_add(1) - DTB_ADDRESS_START) as usize]) as u32)
+                        << 8)
+                    | (((self.dtb[(addr.wrapping_add(2) - DTB_ADDRESS_START) as usize]) as u32)
+                        << 16)
+                    | (((self.dtb[(addr.wrapping_add(3) - DTB_ADDRESS_START) as usize]) as u32)
+                        << 24))
+            }
             MROM_ADDRESS_START..=MROM_ADDRESS_END => {
                 Ok(self.mrom.read32(addr - MROM_ADDRESS_START))
             }
@@ -167,6 +193,23 @@ impl Bus for BusQemuVirt {
             return Ok(self.dram.read64(addr - DRAM_ADDRESS_START));
         }
         match addr {
+            DTB_ADDRESS_START..=DTB_ADDRESS_END => {
+                Ok((self.dtb[(addr - DTB_ADDRESS_START) as usize] as u64)
+                    | (((self.dtb[(addr.wrapping_add(1) - DTB_ADDRESS_START) as usize]) as u64)
+                        << 8)
+                    | (((self.dtb[(addr.wrapping_add(2) - DTB_ADDRESS_START) as usize]) as u64)
+                        << 16)
+                    | (((self.dtb[(addr.wrapping_add(3) - DTB_ADDRESS_START) as usize]) as u64)
+                        << 24)
+                    | (((self.dtb[(addr.wrapping_add(4) - DTB_ADDRESS_START) as usize]) as u64)
+                        << 32)
+                    | (((self.dtb[(addr.wrapping_add(5) - DTB_ADDRESS_START) as usize]) as u64)
+                        << 40)
+                    | (((self.dtb[(addr.wrapping_add(6) - DTB_ADDRESS_START) as usize]) as u64)
+                        << 48)
+                    | (((self.dtb[(addr.wrapping_add(7) - DTB_ADDRESS_START) as usize]) as u64)
+                        << 56))
+            }
             MROM_ADDRESS_START..=MROM_ADDRESS_END => {
                 Ok(self.mrom.read64(addr - MROM_ADDRESS_START))
             }

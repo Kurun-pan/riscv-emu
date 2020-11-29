@@ -1,9 +1,10 @@
+use crate::bus::bus::Device;
+use crate::console::Console;
 use crate::cpu::cpu_csr::*;
 use crate::cpu::cpu_instruction::{Opecode, OPECODES};
 use crate::cpu::cpu_instruction_comp::*;
-use crate::cpu::trap::*;
 use crate::cpu::mmu::Mmu;
-use crate::console::Console;
+use crate::cpu::trap::*;
 use crate::machine::Machine;
 
 #[derive(Clone)]
@@ -47,7 +48,7 @@ impl Cpu {
             mmu: Mmu::new(Xlen::X64, machine_, console),
             testmode: testmode_,
         };
-        cpu.x[0xb] = 0x1020; // initial value for Linux booting.
+        cpu.x[0xb] = cpu.mmu.get_bus().get_base_address(Device::DTB) as i64; // initial value for Linux booting (DTB start address).
         cpu
     }
 
@@ -316,7 +317,7 @@ impl Cpu {
                 Interrupt::UserSoftware => 0x001,
             },
         );
-    }    
+    }
 
     fn select_handling_interrupt(&mut self, interrupt: Interrupt) -> bool {
         let trap_code = interrupt as u8;
@@ -502,7 +503,7 @@ impl Cpu {
             Privilege::Machine => CSR_MTVEC,
         });
         self.pc
-     }
+    }
 
     fn get_cause(&mut self, trap_code: u8, is_interrupt: bool) -> u64 {
         let mut cause = trap_code as u64;

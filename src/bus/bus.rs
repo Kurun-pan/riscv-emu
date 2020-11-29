@@ -4,6 +4,7 @@ pub enum Device {
     Dram = 0,
     SpiFlash = 1,
     Disk = 2,
+    DTB = 3,
 }
 
 pub trait Bus {
