@@ -2341,9 +2341,9 @@ fn sc_d(cpu: &mut Cpu, _addr: u64, word: u32) -> Result<(), Trap> {
                 cpu.mmu.set_address_reserve(addr, false);
                 0
             }
-            Err(_e) => 1,
+            Err(e) => return Err(e),
         },
-        false => panic!("{:x} is not reserved!!"),
+        false => 1,
     };
     Ok(())
 }
