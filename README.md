@@ -8,7 +8,19 @@
 
 ```
 $ cargo run --release
-$ ./target/release/riscv-emu -k ./artifacts/linux/fw_payload.elf -f ./artifacts/linux/busybox -m SiFive_u
+$ ./target/release/riscv-emu -k ./artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d artifacts/linux/dtb/qemu_virtio.dtb -f ./artifacts/linux/rootfs.img
+```
+
+#### Build Device Tree
+
+```
+$ dtc -O dtb -I dts -o ./artifacts/linux/dtb/qemu_virtio.dtb ./artifacts/linux/dtb/qemu_virtio.dts
+```
+
+#### Trace instruction (Test mode)
+
+```
+$ ./target/release/riscv-emu -k ./artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d artifacts/linux/dtb/qemu_virtio.dtb -f ./artifacts/linux/rootfs.img -t
 ```
 
 ### NuttX
