@@ -353,9 +353,32 @@ fn c_addi4spn(word: u16) -> Result<u32, ()> {
     }
 }
 
+/// [c.ld rd’,uimm(rs1’)]
+fn c_ld(word: u16) -> Result<u32, ()> {
+    let rd_ = ((word >> 2) & 0x7) as u32;
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+
+    // ld rd,offset(rs1)
+    let op = 0x3 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rs1_ + 8) << 15;
+    let offset = uimm << 20;
+    Ok(offset | rs1 | 3 << 12 | rd | op)
+}
+
 /// [c.fld rd’,uimm(rs1’)]
-fn c_fld(_word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+fn c_fld(word: u16) -> Result<u32, ()> {
+    let rd_ = ((word >> 2) & 0x7) as u32;
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+
+    // fld rd,uimm(rs1)
+    let op = 0x7 as u32;
+    let rd = (rd_ + 8) << 7;
+    let rs1 = (rs1_ + 8) << 15;
+    let offset = uimm << 20;
+    Ok(offset | rs1 | 3 << 12 | rd | op)
 }
 
 /// [c.lw rd’,uimm(rs1’)]
@@ -373,17 +396,12 @@ fn c_lw(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.flw rd’,uimm(rs1’)]
-fn c_flw(_word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-}
-
-/// [c.ld rd’,uimm(rs1’)]
-fn c_ld(word: u16) -> Result<u32, ()> {
+fn c_flw(word: u16) -> Result<u32, ()> {
     let rd_ = ((word >> 2) & 0x7) as u32;
     let rs1_ = ((word >> 7) & 0x7) as u32;
-    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word >> 4) & 0x4) | ((word << 1) & 0x40)) as u32;
 
-    // ld rd,offset(rs1)
+    // flw rd,uimm(rs1)
     let op = 0x3 as u32;
     let rd = (rd_ + 8) << 7;
     let rs1 = (rs1_ + 8) << 15;
@@ -391,9 +409,34 @@ fn c_ld(word: u16) -> Result<u32, ()> {
     Ok(offset | rs1 | 3 << 12 | rd | op)
 }
 
+/// [c.sd rd’,uimm(rs1’)]
+fn c_sd(word: u16) -> Result<u32, ()> {
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+
+    // sd rs2,offset(rs1)
+    let op = 0x23 as u32;
+    let rs2 = (rs2_ + 8) << 20;
+    let rs1 = (rs1_ + 8) << 15;
+    let offset_h = ((uimm >> 5) & 0x7f) << 25;
+    let offset_l = (uimm & 0x1f) << 7;
+     Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
+}
+
 /// [c.fsd rd’,uimm(rs1’)]
-fn c_fsd(_word: u16) -> Result<u32, ()> {
-    panic!("TODO");
+fn c_fsd(word: u16) -> Result<u32, ()> {
+    let rs1_ = ((word >> 7) & 0x7) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+
+    // fsd rd2,uimm(rs1)
+    let op = 0x27 as u32;
+    let rs1 = (rs1_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
+    let offset_h = ((uimm >> 5) & 0x7f) << 25;
+    let offset_l = (uimm & 0x1f) << 7;
+    Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
 }
 
 /// [c.sw rd’,uimm(rs1’)]
@@ -412,23 +455,18 @@ fn c_sw(word: u16) -> Result<u32, ()> {
 }
 
 /// [c.fsw rd’,uimm(rs1’)]
-fn c_fsw(_word: u16) -> Result<u32, ()> {
-    panic!("TODO");
-}
-
-/// [c.sd rd’,uimm(rs1’)]
-fn c_sd(word: u16) -> Result<u32, ()> {
-    let rs2_ = ((word >> 2) & 0x7) as u32;
+fn c_fsw(word: u16) -> Result<u32, ()> {
     let rs1_ = ((word >> 7) & 0x7) as u32;
-    let uimm = (((word >> 7) & 0x38) | ((word << 1) & 0xc0)) as u32;
+    let rs2_ = ((word >> 2) & 0x7) as u32;
+    let uimm = (((word >> 7) & 0x38) | ((word >> 4) & 0x4) | ((word << 1) & 0x40)) as u32;
 
-    // sd rs2,offset(rs1)
+    // fsw rd2,uimm(rs1)
     let op = 0x23 as u32;
-    let rs2 = (rs2_ + 8) << 20;
     let rs1 = (rs1_ + 8) << 15;
+    let rs2 = (rs2_ + 8) << 20;
     let offset_h = ((uimm >> 5) & 0x7f) << 25;
     let offset_l = (uimm & 0x1f) << 7;
-     Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
+    Ok(offset_h | rs2 | rs1 | 3 << 12 | offset_l | op)
 }
 
 /// [c.nop]
