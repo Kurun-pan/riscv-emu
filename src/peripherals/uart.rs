@@ -6,7 +6,6 @@ use crate::console::Console;
 const IER_DATA_READY: u8 = 0x01;
 const IER_THR_EMPTY: u8 = 0x02;
 
-const ISR_INTERRUPT_STATUS_INTERRUPT: u8 = 0x01;
 const ISR_IDENTIFICATION_CODE_DATA_READY: u8 = 0x4;
 const ISR_IDENTIFICATION_CODE_THR_EMPTY: u8 = 0x2;
 
@@ -48,7 +47,7 @@ impl Uart {
             rhr: 0,
             thr: 0,
             ier: 0,
-            isr: 0x01,
+            isr: 0x0e,
             fcr: 0,
             lcr: 0,
             mcr: 0,
@@ -65,26 +64,22 @@ impl Uart {
 
         // TODO: Correctly care for the clock frequency (1MHz clock @ RTCCLK).
         // The current settings have no reason.
-
         // receiver
         if (self.cycle & 0xffff) == 0 && self.rhr == 0 {
             match self.console.getchar() {
                 0 => {}
                 c => {
                     self.rhr = c;
-                    //if (self.ier & IER_DATA_READY) > 0 {
                     self.lsr |= LSR_DATA_READY;
-                    //}
                 }
             }
         }
+
         // transmitter
         if (self.cycle & 0xf) == 0 && self.thr != 0 {
             self.console.putchar(self.thr);
             self.thr = 0;
-            //if (self.ier & IER_THR_EMPTY) > 0 {
             self.lsr |= LSR_THR_EMPTY;
-            //}
         }
     }
 
@@ -96,7 +91,13 @@ impl Uart {
                 self.lsr &= !LSR_DATA_READY;
                 rhr
             }
-            1 => self.ier,
+            1 => {
+                if self.lcr & LCR_DIVISOR_LATCH_ENABLE == 0 {
+                    self.ier
+                } else {
+                    0
+                }
+            }
             2 => self.isr,
             3 => self.lcr,
             4 => self.mcr,
@@ -117,29 +118,31 @@ impl Uart {
             }
             1 => {
                 if self.lcr & LCR_DIVISOR_LATCH_ENABLE == 0 {
-                    self.ier = data
+                    self.ier = data;
                 }
             }
             2 => self.fcr = data,
             3 => self.lcr = data,
             4 => self.mcr = data,
-            5 => {}
-            6 => {}
+            //5 => {} // RO
+            //6 => {} // RO
             7 => self.spr = data,
             _ => panic!(),
         }
     }
 
     pub fn is_irq(&mut self) -> bool {
+        let mut irq = false;
+        // prioritized interrupt levels: LSR > RXRDY > RXRDY (Timeout) > TXRDY > MSR
         if (self.ier & IER_DATA_READY) != 0 && self.rhr != 0 {
-            self.isr = self.isr & 0xf0 | ISR_IDENTIFICATION_CODE_DATA_READY;
-            return true;
+            self.isr = ISR_IDENTIFICATION_CODE_DATA_READY;
+            irq = true;
+        } else if (self.ier & IER_THR_EMPTY) != 0 && self.thr == 0 {
+            self.isr = ISR_IDENTIFICATION_CODE_THR_EMPTY;
+            irq = true;
+        } else {
+            self.isr = 0xe;
         }
-        if (self.ier & IER_THR_EMPTY) != 0 && self.thr == 0 {
-            self.isr = self.isr & 0xf0 | ISR_IDENTIFICATION_CODE_THR_EMPTY;
-            return true;
-        }
-        self.isr = self.isr & !ISR_INTERRUPT_STATUS_INTERRUPT;
-        false
+        return irq;
     }
 }
