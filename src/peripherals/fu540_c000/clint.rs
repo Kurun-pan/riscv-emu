@@ -29,6 +29,14 @@ impl Clint {
             mtime: 0,
         }
     }
+
+    pub fn read_mtime(&self) -> u64 {
+        self.mtime
+    }
+
+    pub fn write_mtime(&mut self, data: u64) {
+        self.mtime = data
+    }
 }
 
 impl Timer for Clint {
