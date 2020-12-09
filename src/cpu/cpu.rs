@@ -48,7 +48,9 @@ impl Cpu {
             mmu: Mmu::new(Xlen::X64, machine_, console),
             testmode: testmode_,
         };
-        cpu.x[0xb] = cpu.mmu.get_bus().get_base_address(Device::DTB) as i64; // initial value for Linux booting (DTB start address).
+
+        // initial value for Linux booting (DTB start address).
+        cpu.x[0xb] = cpu.mmu.get_bus().get_base_address(Device::DTB) as i64;
         cpu
     }
 
@@ -134,7 +136,10 @@ impl Cpu {
             Err(e) => return Err(e),
             _ => {}
         }
-        self.x[0] = 0; // x0 is hardwired to the constant 0.
+
+        // x0 register is hardwired to the constant 0. To simplify the implementation,
+        // I don't care that x0 is always zero in each instruction implementation.
+        self.x[0] = 0;
 
         return Ok(());
     }
