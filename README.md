@@ -1,5 +1,7 @@
 # riscv-emu
 
+![Rust](https://github.com/Kurun-pan/riscv-emu/workflows/Rust/badge.svg)
+
 `riscv-emu` is the RISC-V emulator that is written in Rust. xv6, NuttX, FreeRTOS and Zephyr OS are supported.
 
 ## Demo
