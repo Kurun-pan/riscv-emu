@@ -122,7 +122,11 @@ impl Bus for BusQemuVirt {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
             INTC_ADDRESS_START..=INTC_ADDRESS_END => panic!("Unexpected size access."),
             UART_ADDRESS_START..=UART_ADDRESS_END => Ok(self.uart.read(addr - UART_ADDRESS_START)),
-            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => panic!("Unexpected size access."),
+            VIRTIO_ADDRESS_START..=VIRTIO_ADDRESS_END => {
+                let virtio_addr = (addr - VIRTIO_ADDRESS_START) & 0xffff_fffc;
+                let data = ((self.virtio.read(virtio_addr) >> 8 * (addr & 0x3)) & 0xff) as u8;
+                Ok(data)
+            }
             _ => Err(()),
         }
     }
