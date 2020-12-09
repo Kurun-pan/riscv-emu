@@ -6,7 +6,7 @@
 
 use crate::peripherals::memory::Memory;
 
-const CONFIG_QUEUE_NUM_MAX: u32 = 0x16;
+const CONFIG_QUEUE_NUM_MAX: u32 = 0x1000; // Linux boot fails if the value is too small.
 const CONFIG_DISK_SECTOR_SIZE: u64 = 512;
 const CONFIG_DMA_DELAY: u64 = 128;
 
@@ -28,6 +28,8 @@ const VIRTIO_QUEUE_NOTIFY: u64 = 0x050;
 const VIRTIO_INTERRUPT_STATUS: u64 = 0x060;
 const VIRTIO_INTERRUPT_ACK: u64 = 0x64;
 const VIRTIO_DEVICE_STATUS: u64 = 0x070;
+const VIRTIO_CONFIG_SPACE0: u64 = 0x100;
+const VIRTIO_CONFIG_SPACE1: u64 = 0x104;
 
 const VIRTIO_INTERRUPT_QUEUE: u32 = 0x1;
 const VIRTIO_INTERRUPT_CONFIGURATION: u32 = 0x2;
@@ -87,6 +89,8 @@ pub struct Virtio {
     interrupt_status: u32,
     ///	Device status (R/W)
     device_status: u32,
+    /// Configuration space (R/W)
+    config_space: Vec<u32>,
 }
 
 impl Virtio {
@@ -107,6 +111,7 @@ impl Virtio {
             queue_notify: Vec::new(),
             interrupt_status: 0,
             device_status: 0,
+            config_space: vec![0x20000, 0], // todo: block count?
         }
     }
 
@@ -121,6 +126,9 @@ impl Virtio {
 
     pub fn tick(&mut self, dram: &mut Memory) {
         self.cycle = self.cycle.wrapping_add(1);
+
+        // If an interrupt is generated immediately, it will not operate normally,
+        // so it is necessary to set a delay time.
         if self.queue_notify.len() > 0 && (self.cycle == self.queue_notify[0] + CONFIG_DMA_DELAY) {
             self.transfer(dram);
             self.interrupt_status |= VIRTIO_INTERRUPT_QUEUE;
@@ -138,11 +146,15 @@ impl Virtio {
             VIRTIO_VERSION => 0x1,            // Legacy device returns value 0x1.
             VIRTIO_DEVICE_ID => 0x2,          // device type; 1 is net, 2 is disk
             VIRTIO_VENDOR_ID => 0x554d4551,   // from xv6-riscv source code.
-            VIRTIO_DEVICE_FEATURES => 0,      // TODO: supoort features.
+            VIRTIO_DEVICE_FEATURES => self.device_features_sel,
             VIRTIO_QUEUE_NUM_MAX => CONFIG_QUEUE_NUM_MAX,
             VIRTIO_QUEUE_PFN => self.queue_pfn,
             VIRTIO_INTERRUPT_STATUS => self.interrupt_status,
             VIRTIO_DEVICE_STATUS => self.device_status,
+            // Device-specific configuration space starts at the offset 0x100 and is accessed with byte alignment.
+            // Its meaning and size depend on the device and the driver.
+            VIRTIO_CONFIG_SPACE0 => self.config_space[0],
+            VIRTIO_CONFIG_SPACE1 => self.config_space[1],
             _ => panic!("Read to reserved area: {:x}", addr),
         }
     }
@@ -167,6 +179,8 @@ impl Virtio {
                 }
             }
             VIRTIO_DEVICE_STATUS => self.device_status = data,
+            VIRTIO_CONFIG_SPACE0 => self.config_space[0] = data,
+            VIRTIO_CONFIG_SPACE1 => self.config_space[1] = data,
             _ => panic!("Write to reserved area: {:x}", addr),
         }
     }
