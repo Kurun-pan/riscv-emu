@@ -1,4 +1,4 @@
-name: Rust
+name: build
 
 on:
   push:
@@ -16,7 +16,6 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --verbose
-
 
   test:
     runs-on: ubuntu-latest
