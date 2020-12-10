@@ -2,9 +2,11 @@ extern crate getopts;
 extern crate riscv_emu;
 
 use riscv_emu::bus::bus::Device;
-use riscv_emu::console::*;
+use riscv_emu::console::TtyDummy;
 use riscv_emu::emulator::Emulator;
 use riscv_emu::machine::Machine;
+
+use riscv_emu_desktop::tty::Tty;
 
 use getopts::Options;
 use std::path::PathBuf;

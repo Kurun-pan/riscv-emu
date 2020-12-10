@@ -33,6 +33,10 @@ impl Emulator {
         self.cpu.set_pc(addr)
     }
 
+    pub fn get_console(&mut self) -> &mut Box<dyn Console> {
+        self.cpu.mmu.get_bus().get_console()
+    }
+
     pub fn set_data_from_file(&mut self, device: Device, filename: &Path) {
         match File::open(&filename) {
             Ok(mut file) => {
@@ -59,20 +63,53 @@ impl Emulator {
     }
 
     pub fn load_program_from_file(&mut self, filename: &Path) {
-        let loader = match ElfLoader::new(filename) {
+        match File::open(&filename) {
+            Ok(mut file) => {
+                let mut data = vec![];
+                match file.read_to_end(&mut data) {
+                    Err(why) => panic!("Failed to read {}: {}", filename.display(), why),
+                    _ => {}
+                };
+                let loader = match ElfLoader::new(data) {
+                    Ok(elf_loader) => elf_loader,
+                    Err(()) => panic!(),
+                };
+
+                if !loader.is_elf() {
+                    panic!("{} is invalid ELF file.", filename.display());
+                }
+
+                let elf_header = loader.get_elf_header();
+                match elf_header.e_machine {
+                    EMachine::RISCV => {}
+                    _ => panic!("{} is not program for RISC-V machine!", filename.display()),
+                }
+                self.load_program(loader);
+            }
+            Err(why) => panic!("Falied to open {}: {}", filename.display(), why),
+        };
+    }
+
+    pub fn load_program_from_binary(&mut self, data: Vec<u8>) {
+        let loader = match ElfLoader::new(data) {
             Ok(elf_loader) => elf_loader,
             Err(()) => panic!(),
         };
 
         if !loader.is_elf() {
-            panic!("{} is invalid ELF file.", filename.display());
+            panic!("{} is invalid ELF data.");
         }
 
         let elf_header = loader.get_elf_header();
         match elf_header.e_machine {
             EMachine::RISCV => {}
-            _ => panic!("{} is not program for RISC-V machine!", filename.display()),
+            _ => panic!("{} is not program for RISC-V machine!"),
         }
+        self.load_program(loader);
+    }
+
+    fn load_program(&mut self, loader: ElfLoader) {
+        let elf_header = loader.get_elf_header();
         self.cpu.set_pc(elf_header.e_entry);
         self.cpu.set_xlen(match elf_header.e_indent.ei_classs {
             EiClass::Class32 => Xlen::X32,

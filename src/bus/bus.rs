@@ -1,3 +1,5 @@
+use crate::console::Console;
+
 #[allow(dead_code)]
 #[derive(Debug)]
 pub enum Device {
@@ -10,6 +12,7 @@ pub enum Device {
 pub trait Bus {
     fn set_device_data(&mut self, device: Device, data: Vec<u8>);
     fn get_base_address(&mut self, device: Device) -> u64;
+    fn get_console(&mut self) -> &mut Box<dyn Console>;
     fn tick(&mut self) -> Vec<bool>;
     fn is_pending_software_interrupt(&mut self, core: usize) -> bool;
     fn is_pending_timer_interrupt(&mut self, core: usize) -> bool;

@@ -59,6 +59,10 @@ impl Uart {
         }
     }
 
+    pub fn get_console(&mut self) -> &mut Box<dyn Console> {
+        &mut self.console
+    }
+
     pub fn tick(&mut self) {
         self.cycle = self.cycle.wrapping_add(1);
 

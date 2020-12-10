@@ -76,6 +76,10 @@ impl Bus for BusQemuVirt {
         }
     }
 
+    fn get_console(&mut self) -> &mut Box<dyn Console> {
+        self.uart.get_console()
+    }    
+
     fn tick(&mut self) -> Vec<bool> {
         self.clock = self.clock.wrapping_add(1);
 

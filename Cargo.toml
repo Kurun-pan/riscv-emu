@@ -1,11 +1,11 @@
 [package]
-name = "riscv-emu"
+name = "riscv_emu"
 version = "0.1.0"
 authors = ["kurun"]
 edition = "2018"
 
 [dependencies]
 lazy_static = "1.4.0"
-memmap = "0.7.0"
-pancurses = "0.16.1"
-getopts = "0.2.21"
+
+[workspace]
+members = [".", "desktop", "web"]

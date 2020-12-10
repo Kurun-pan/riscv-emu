@@ -91,6 +91,10 @@ impl Bus for BusFu540 {
         }
     }
 
+    fn get_console(&mut self) -> &mut Box<dyn Console> {
+        self.uart0.get_console()
+    }
+
     fn tick(&mut self) -> Vec<bool> {
         self.clock = self.clock.wrapping_add(1);
 

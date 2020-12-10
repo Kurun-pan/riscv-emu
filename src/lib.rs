@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate memmap;
 
 pub mod bus;
 pub mod console;

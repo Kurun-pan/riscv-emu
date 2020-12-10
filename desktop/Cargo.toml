@@ -1,0 +1,10 @@
+[package]
+name = "riscv_emu_desktop"
+version = "0.1.0"
+authors = ["kurun"]
+edition = "2018"
+
+[dependencies]
+riscv_emu = {path = "../"}
+getopts = "0.2.21"
+pancurses = "0.16.1"

@@ -5,15 +5,21 @@
 
 `riscv-emu` is the RISC-V emulator that is written in Rust. xv6, NuttX, FreeRTOS and Zephyr OS are supported.
 
-## Demo
+## How to build for desktop terminal app
+
+```
+$ cd desktop
+$ cargo build --release
+```
+
+## How to run
 
 ### Linux
 
 Linux is currently being debugged!
 
 ```
-$ cargo run --release
-$ ./target/release/riscv-emu -k ./artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d artifacts/linux/dtb/qemu_virtio.dtb -f ./artifacts/linux/rootfs.img
+$ ../target/release/riscv_emu_desktop -k ../artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d ../artifacts/linux/dtb/qemu_virtio.dtb -f ../artifacts/linux/rootfs.img
 ```
 
 #### Build Device Tree
@@ -22,17 +28,10 @@ $ ./target/release/riscv-emu -k ./artifacts/linux/fw_payload_qemu.elf -m Qemu_vi
 $ dtc -O dtb -I dts -o ./artifacts/linux/dtb/qemu_virtio.dtb ./artifacts/linux/dtb/qemu_virtio.dts
 ```
 
-#### Trace instruction (Test mode)
-
-```
-$ ./target/release/riscv-emu -k ./artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d artifacts/linux/dtb/qemu_virtio.dtb -f ./artifacts/linux/rootfs.img -t
-```
-
 ### NuttX
 
 ```
-$ cargo run --release
-$ ./target/release/riscv-emu -k ./artifacts/nuttx/nuttx -m SiFive_e
+$ ../target/release/riscv_emu_desktop -k ../artifacts/nuttx/nuttx -m SiFive_e
 ```
 
 ![animation](./demo/nuttx-riscv.gif)
@@ -40,8 +39,7 @@ $ ./target/release/riscv-emu -k ./artifacts/nuttx/nuttx -m SiFive_e
 ### xv6
 
 ```
-$ cargo run --release
-$ ./target/release/riscv-emu -k ./artifacts/xv6/kernel -f ./artifacts/xv6/fs.img -m Qemu_virt
+$ ../target/release/riscv_emu_desktop -k ../artifacts/xv6/kernel -f ../artifacts/xv6/fs.img -m Qemu_virt
 ```
 
 ![animation](./demo/xv6-riscv.gif)
@@ -49,18 +47,22 @@ $ ./target/release/riscv-emu -k ./artifacts/xv6/kernel -f ./artifacts/xv6/fs.img
 ### FreeRTOS
 
 ```
-$ cargo run --release
-$ ./target/release/riscv-emu -k ./artifacts/freertos/RTOSDemo.elf -m SiFive_e
+$ ../target/release/riscv_emu_desktop -k ../artifacts/freertos/RTOSDemo.elf -m SiFive_e
 ```
 
 ### Zephyr
 
 ```
-$ cargo run --release
-$ ./target/release/riscv-emu -k ./artifacts/zephyr/zephyr.elf -m SiFive_e
+$ ../target/release/riscv_emu_desktop -k ../artifacts/zephyr/zephyr.elf -m SiFive_e
 ```
 
 ![animation](./demo/zephyr.gif)
+
+### User bare-metal programs
+
+```
+$ ../target/release/riscv_emu_desktop -k ../tests/bin/rv32ui-p-add -t
+```
 
 ## Tests
 

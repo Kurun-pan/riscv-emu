@@ -1,8 +1,3 @@
-use memmap::Mmap;
-use std::fs::File;
-
-use std::path::Path;
-
 const HEADER_MAGIC: u32 = 0x464c457f; // 0x7f 'E' 'L' 'F'
 const TOHOST: u64 = 0x0074736f686f742e; // .tohost
 
@@ -70,8 +65,8 @@ pub enum ShType {
     Num = 0x13,          // Number of defined types
     Loproc = 0x70000000, //
     Hiproc = 0x7F000000, //
-    Louser = 0x80000000, //
-    Hiuser = 0xFFFFFFFF, //
+    //Louser = 0x80000000, //
+    //Hiuser = 0xFFFFFFFF, //
 }
 
 #[derive(Debug)]
@@ -87,7 +82,7 @@ pub enum ShFlag {
     Group = 0x200,
     Tls = 0x400,
     Maskos = 0x0ff00000,
-    MaskProc = 0xf0000000,
+    //MaskProc = 0xf0000000,
     Ordered = 0x4000000,
     Exclude = 0x8000000,
 }
@@ -189,23 +184,12 @@ pub enum EVersion {
 }
 
 pub struct ElfLoader {
-    mapped_file: Mmap,
+    data: Vec<u8>,
 }
 
 impl ElfLoader {
-    pub fn new(filename: &Path) -> Result<Self, ()> {
-        let file = match File::open(&filename) {
-            Ok(file) => file,
-            Err(why) => panic!("Couldn't open {}: {}", filename.display(), why),
-        };
-        Ok(Self {
-            mapped_file: unsafe {
-                match Mmap::map(&file) {
-                    Ok(mmap) => mmap,
-                    Err(why) => panic!("Couldn't read {}: {}", filename.display(), why),
-                }
-            },
-        })
+    pub fn new(data: Vec<u8>) -> Result<Self, ()> {
+        Ok(Self { data: data })
     }
 
     pub fn is_elf(&self) -> bool {
@@ -410,7 +394,7 @@ impl ElfLoader {
                 0x13 => ShType::Num,
                 n => match n {
                     0x70000000..=0x7FFFFFFF => ShType::Loproc,
-                    0x80000000..=0x8FFFFFFF => ShType::Louser,
+                    //0x80000000..=0x8FFFFFFF => ShType::Louser,
                     n => panic!("Unknown type version {:08X}", n),
                 },
             };
@@ -483,13 +467,13 @@ impl ElfLoader {
     }
 
     pub fn read8(&self, offset: usize) -> u8 {
-        self.mapped_file[offset]
+        self.data[offset]
     }
 
     fn read16(&self, offset: usize) -> u16 {
         let mut data = 0;
         for i in 0..2 {
-            data |= (self.mapped_file[offset + i] as u16) << (8 * i);
+            data |= (self.data[offset + i] as u16) << (8 * i);
         }
         data
     }
@@ -497,7 +481,7 @@ impl ElfLoader {
     fn read32(&self, offset: usize) -> u32 {
         let mut data = 0;
         for i in 0..4 {
-            data |= (self.mapped_file[offset + i] as u32) << (8 * i);
+            data |= (self.data[offset + i] as u32) << (8 * i);
         }
         data
     }
@@ -505,7 +489,7 @@ impl ElfLoader {
     fn read64(&self, offset: usize) -> u64 {
         let mut data = 0;
         for i in 0..8 {
-            data |= (self.mapped_file[offset + i] as u64) << (8 * i);
+            data |= (self.data[offset + i] as u64) << (8 * i);
         }
         data
     }
