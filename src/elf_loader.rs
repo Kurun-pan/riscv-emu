@@ -3,7 +3,7 @@ use std::fs::File;
 
 use std::path::Path;
 
-const HEADER_MAGIC: [u8; 4] = [0x7f, 0x45, 0x4c, 0x46]; // 0x7f 'E' 'L' 'F'
+const HEADER_MAGIC: u32 = 0x464c457f; // 0x7f 'E' 'L' 'F'
 const TOHOST: u64 = 0x0074736f686f742e; // .tohost
 
 pub struct ElfHeader {
@@ -198,7 +198,7 @@ impl ElfLoader {
             Ok(file) => file,
             Err(why) => panic!("Couldn't open {}: {}", filename.display(), why),
         };
-        Ok(ElfLoader {
+        Ok(Self {
             mapped_file: unsafe {
                 match Mmap::map(&file) {
                     Ok(mmap) => mmap,
@@ -209,29 +209,29 @@ impl ElfLoader {
     }
 
     pub fn is_elf(&self) -> bool {
-        self.mapped_file[0..4] == HEADER_MAGIC
+        self.read32(0) == HEADER_MAGIC
     }
 
     pub fn get_elf_header(&self) -> ElfHeader {
         let ei = Ei {
-            ei_classs: match self.mapped_file[4] {
+            ei_classs: match self.read8(4) {
                 0 => EiClass::None,
                 1 => EiClass::Class32,
                 2 => EiClass::Class64,
                 n => panic!("Unknown e_ident class {}", n),
             },
-            ei_data: match self.mapped_file[5] {
+            ei_data: match self.read8(5) {
                 0 => EiData::None,
                 1 => EiData::D2Lsb,
                 2 => EiData::D2Msb,
                 n => panic!("Unknown e_ident endian {}", n),
             },
-            ei_version: match self.mapped_file[6] {
+            ei_version: match self.read8(6) {
                 0 => EiVersion::None,
                 1 => EiVersion::Current,
                 n => panic!("Unknown e_ident version {}", n),
             },
-            ei_osabi: match self.mapped_file[7] {
+            ei_osabi: match self.read8(7) {
                 0x00 => EiOsAbi::SystemV,
                 0x01 => EiOsAbi::HpUx,
                 0x02 => EiOsAbi::NetBsd,
@@ -252,7 +252,7 @@ impl ElfLoader {
                 0x12 => EiOsAbi::StartusTechnologiesOpenVos,
                 n => panic!("Unknown e_ident version {}", n),
             },
-            ei_abiversion: self.mapped_file[8],
+            ei_abiversion: self.read8(8),
         };
 
         let e_entry = match ei.ei_classs {
@@ -310,7 +310,7 @@ impl ElfLoader {
                 0xFFFF => EType::Hiproc,
                 n => panic!("Unknown type {:04X}", n),
             },
-            e_machine: match self.mapped_file[0x12] {
+            e_machine: match self.read8(0x12) {
                 0x00 => EMachine::None,
                 0x01 => EMachine::M32,
                 0x02 => EMachine::SPARC,

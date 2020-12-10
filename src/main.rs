@@ -90,7 +90,7 @@ fn main() {
     // download user program to main mermoy.
     {
         let kernel = PathBuf::from(kernel_path);
-        emu.load_program(kernel.as_path());
+        emu.load_program_from_file(kernel.as_path());
     }
 
     // download disk image (Userland rootfs)

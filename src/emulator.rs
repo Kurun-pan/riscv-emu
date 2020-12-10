@@ -48,12 +48,17 @@ impl Emulator {
         };
     }
 
+    pub fn set_data_from_binary(&mut self, device: Device, data: Vec<u8>) {
+        let bus = self.cpu.mmu.get_bus();
+        bus.set_device_data(device, data);
+    }
+
     pub fn set_dram_data(&mut self, data: Vec<u8>) {
         let bus = self.cpu.mmu.get_bus();
         bus.set_device_data(Device::Dram, data);
     }
 
-    pub fn load_program(&mut self, filename: &Path) {
+    pub fn load_program_from_file(&mut self, filename: &Path) {
         let loader = match ElfLoader::new(filename) {
             Ok(elf_loader) => elf_loader,
             Err(()) => panic!(),

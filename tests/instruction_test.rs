@@ -33,7 +33,7 @@ fn instruction_test(filename: &'static str) -> u32 {
     let testmode = true;
     let tty = Box::new(TtyDummy::new());
     let mut emu = Emulator::new(Machine::SiFiveU, tty, testmode);
-    emu.load_program(root.as_path());
+    emu.load_program_from_file(root.as_path());
     let result = match emu.run() {
         Ok(ret) => ret,
         Err(ret) => ret,
