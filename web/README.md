@@ -1,6 +1,15 @@
+
+## Prepare build environment
+
+```
 $ cargo install wasm-pack
 $ npm install -g node-static
+$ npm install xterm
+```
 
-wasm-pack build --target web
+## Build for web app
 
-static pkg
+```
+$ wasm-pack build --target web
+$ static pkg
+```
