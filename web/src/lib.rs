@@ -35,12 +35,8 @@ impl RiscvEmu {
         self.core.set_data_from_binary(Device::DTB, data);
     }
 
-    pub fn run(&mut self) {
-        let result = match self.core.run() {
-            Ok(ret) => ret,
-            Err(ret) => ret,
-        };
-        println!("Result: {}", result);
+    pub fn run_steps(&mut self, steps: u32) {
+        self.core.run_steps(steps);
     }
 
     pub fn get_console_output(&mut self) -> u8 {

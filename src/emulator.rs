@@ -186,4 +186,10 @@ impl Emulator {
             }
         }
     }
+
+    pub fn run_steps(&mut self, steps: u32) {
+        for _i in 0..steps {
+            self.cpu.tick();
+        }
+    }
 }
