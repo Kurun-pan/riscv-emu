@@ -8,7 +8,7 @@
 ## Usage
 
 ```
-$ ../target/release/riscv_emu_desktop FILE [options]
+$ ../target/release/riscv_emu_desktop [options]
 Options:
     -k, --kernel        Kernel image file
     -f, --filesystem    File system image file
@@ -76,9 +76,9 @@ $ ../target/release/riscv_emu_desktop -k ../artifacts/zephyr/zephyr.elf -m SiFiv
 $ ../target/release/riscv_emu_desktop -k ../tests/bin/rv32ui-p-add -t
 ```
 
-### Run tests
+## Tests
 
-### Instruction Regression Tests
+### Regression Tests (risc-tests)
 
 ```
 $ cargo test
