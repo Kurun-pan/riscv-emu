@@ -34,12 +34,6 @@ Linux is currently being debugged!
 $ ../target/release/riscv_emu_desktop -k ../artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d ../artifacts/linux/dtb/qemu_virtio.dtb -f ../artifacts/linux/rootfs.img
 ```
 
-##### Build Device Tree
-
-```
-$ dtc -O dtb -I dts -o ./artifacts/linux/dtb/qemu_virtio.dtb ./artifacts/linux/dtb/qemu_virtio.dts
-```
-
 #### NuttX
 
 ```
