@@ -11,5 +11,5 @@ $ npm install xterm
 
 ```
 $ wasm-pack build --target web
-$ static pkg
+$ static sample
 ```

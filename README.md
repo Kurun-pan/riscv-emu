@@ -3,18 +3,30 @@
 ![build](https://github.com/Kurun-pan/riscv-emu/workflows/build/badge.svg)
 ![riscv-tests](https://github.com/Kurun-pan/riscv-emu/workflows/riscv-tests/badge.svg)
 
-`riscv-emu` is the RISC-V emulator that is written in Rust. xv6, NuttX, FreeRTOS and Zephyr OS are supported.
+`riscv-emu` is the RISC-V emulator that is written in Rust. Linux, xv6, NuttX, FreeRTOS and Zephyr OS are supported.
 
-## How to build for desktop terminal app
+## Usage
 
 ```
+$ ../target/release/riscv_emu_desktop FILE [options]
+Options:
+    -k, --kernel        Kernel image file
+    -f, --filesystem    File system image file
+    -d, --dtb           Device tree binary file
+    -m, --machine       Target machine (SiFive_e|SiFive_u|Qemu_virt)
+    -t, --testmode      Testmode is enabled
+    -h, --help          Help message
+```
+
+### Run on desktop terminal
+
+```
+$ git clone https://github.com/Kurun-pan/riscv-emu.git
 $ cd desktop
 $ cargo build --release
 ```
 
-## How to run
-
-### Linux
+#### Linux
 
 Linux is currently being debugged!
 
@@ -22,13 +34,13 @@ Linux is currently being debugged!
 $ ../target/release/riscv_emu_desktop -k ../artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d ../artifacts/linux/dtb/qemu_virtio.dtb -f ../artifacts/linux/rootfs.img
 ```
 
-#### Build Device Tree
+##### Build Device Tree
 
 ```
 $ dtc -O dtb -I dts -o ./artifacts/linux/dtb/qemu_virtio.dtb ./artifacts/linux/dtb/qemu_virtio.dts
 ```
 
-### NuttX
+#### NuttX
 
 ```
 $ ../target/release/riscv_emu_desktop -k ../artifacts/nuttx/nuttx -m SiFive_e
@@ -36,7 +48,7 @@ $ ../target/release/riscv_emu_desktop -k ../artifacts/nuttx/nuttx -m SiFive_e
 
 ![animation](./demo/nuttx-riscv.gif)
 
-### xv6
+#### xv6
 
 ```
 $ ../target/release/riscv_emu_desktop -k ../artifacts/xv6/kernel -f ../artifacts/xv6/fs.img -m Qemu_virt
@@ -44,13 +56,13 @@ $ ../target/release/riscv_emu_desktop -k ../artifacts/xv6/kernel -f ../artifacts
 
 ![animation](./demo/xv6-riscv.gif)
 
-### FreeRTOS
+#### FreeRTOS
 
 ```
 $ ../target/release/riscv_emu_desktop -k ../artifacts/freertos/RTOSDemo.elf -m SiFive_e
 ```
 
-### Zephyr
+#### Zephyr
 
 ```
 $ ../target/release/riscv_emu_desktop -k ../artifacts/zephyr/zephyr.elf -m SiFive_e
@@ -58,20 +70,19 @@ $ ../target/release/riscv_emu_desktop -k ../artifacts/zephyr/zephyr.elf -m SiFiv
 
 ![animation](./demo/zephyr.gif)
 
-### User bare-metal programs
+#### User bare-metal programs
 
 ```
 $ ../target/release/riscv_emu_desktop -k ../tests/bin/rv32ui-p-add -t
 ```
 
-## Tests
+### Run tests
 
 ### Instruction Regression Tests
 
 ```
 $ cargo test
 ```
-
 
 ## Support Status
 
