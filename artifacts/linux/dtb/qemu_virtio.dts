@@ -11,6 +11,21 @@
         stdout-path = "/uart@10000000";
     };
 
+    uart@10000000 {
+        compatible = "ns16550a";
+        reg = <0x0 0x10000000 0x0 0x100>;
+        clock-frequency = <0x384000>;
+        interrupts = <10>;
+		interrupt-parent = <&intc>;
+    };
+
+    virtio_mmio@10001000 {
+        compatible = "virtio,mmio";
+        reg = <0x0 0x10001000 0x0 0x1000>;
+        interrupts = <1>;
+        interrupt-parent = <&intc>;
+    };
+
     cpus {
         #address-cells = <1>;
         #size-cells = <0>;
@@ -43,21 +58,6 @@
     memory@80000000 {
         device_type = "memory";
         reg = <0x0 0x80000000 0x0 0x8000000>;
-    };
-
-    virtio_mmio@10001000 {
-        compatible = "virtio,mmio";
-        reg = <0x0 0x10001000 0x0 0x1000>;
-        interrupts = <1>;
-		interrupt-parent = <&intc>;
-    };
-
-    uart@10000000 {
-        compatible = "ns16550a";
-        reg = <0x0 0x10000000 0x0 0x100>;
-        clock-frequency = <0x384000>;
-        interrupts = <10>;
-		interrupt-parent = <&intc>;
     };
 
     clint@2000000 {
