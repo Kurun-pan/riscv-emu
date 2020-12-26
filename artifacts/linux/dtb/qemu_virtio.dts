@@ -16,7 +16,7 @@
         reg = <0x0 0x10000000 0x0 0x100>;
         clock-frequency = <0x384000>;
         interrupts = <10>;
-		interrupt-parent = <&intc>;
+        interrupt-parent = <&intc>;
     };
 
     virtio_mmio@10001000 {
@@ -33,10 +33,10 @@
         cpu@0 {
             device_type = "cpu";
             compatible = "riscv";
-			riscv,isa = "rv64abcdfimnsu";
+            riscv,isa = "rv64abcdfimnsu";
             mmu-type = "riscv,sv39";
             reg = <0>;
-			clock-frequency = <0>;
+            clock-frequency = <0>;
             status = "okay";
             vic: interrupt-controller {
                 compatible = "riscv,cpu-intc";
@@ -64,5 +64,5 @@
         compatible = "riscv,clint0";
         reg = <0x0 0x2000000 0x0 0x10000>;
         interrupts-extended = <&vic 3 &vic 7>;
-	};
+    };
 };
