@@ -31,7 +31,11 @@ $ cargo build --release
 Linux is currently being debugged!
 
 ```
-$ ../target/release/riscv_emu_desktop -k ../artifacts/linux/fw_payload_qemu.elf -m Qemu_virt -d ../artifacts/linux/dtb/qemu_virtio.dtb -f ../artifacts/linux/rootfs.img
+$ ../target/release/riscv_emu_desktop \
+        -k ../artifacts/linux/fw_payload_qemu.elf \
+        -m Qemu_virt \
+        -d ../artifacts/linux/dtb/qemu_virtio.dtb \
+        -f ../artifacts/linux/rootfs.img
 ```
 
 #### NuttX
@@ -45,7 +49,10 @@ $ ../target/release/riscv_emu_desktop -k ../artifacts/nuttx/nuttx -m SiFive_e
 #### xv6
 
 ```
-$ ../target/release/riscv_emu_desktop -k ../artifacts/xv6/kernel -f ../artifacts/xv6/fs.img -m Qemu_virt
+$ ../target/release/riscv_emu_desktop \
+        -k ../artifacts/xv6/kernel \
+        -m Qemu_virt \
+        -f ../artifacts/xv6/fs.img
 ```
 
 ![animation](./demo/xv6-riscv.gif)
