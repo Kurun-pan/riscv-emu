@@ -983,8 +983,8 @@ fn disassemble_i(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     s += &format!("{:}", REGISTERS.get(&o.rd).unwrap());
     s += &format!(":{:x}", _cpu.x[o.rd as usize]);
     s += &format!(",{:x}", o.imm);
-    s += &format!("({:})", REGISTERS.get(&o.rs1).unwrap());
-    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s += &format!("({:}", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x})", _cpu.x[o.rs1 as usize]);
     s
 }
 
@@ -1023,8 +1023,8 @@ fn disassemble_s(_cpu: &Cpu, mnemonic: &str, word: u32) -> String {
     s += &format!("{:}", REGISTERS.get(&o.rs2).unwrap());
     s += &format!(":{:x}", _cpu.x[o.rs2 as usize]);
     s += &format!(",{:x}", o.imm);
-    s += &format!("({:})", REGISTERS.get(&o.rs1).unwrap());
-    s += &format!(":{:x}", _cpu.x[o.rs1 as usize]);
+    s += &format!("({:}", REGISTERS.get(&o.rs1).unwrap());
+    s += &format!(":{:x})", _cpu.x[o.rs1 as usize]);
     s
 }
 

@@ -7,7 +7,7 @@ use crate::cpu::mmu::Mmu;
 use crate::cpu::trap::*;
 use crate::machine::Machine;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Xlen {
     X32 = 0,
     X64 = 1,
@@ -108,8 +108,9 @@ impl Cpu {
 
         let mut debug_message = String::new();
         if self.testmode {
-            debug_message += &format!(" [PC]: {:016x}", instruction_addr);
-            debug_message += &format!(" [P]: {:?} |", self.privilege);
+            debug_message += &format!("[PC]: {:016x}", instruction_addr);
+            debug_message += &format!(" [P]: {:?}", self.privilege);
+            debug_message += &format!(" [XLEN]: {:?} |", self.xlen);
             debug_message += &format!("    {:08x}    ", word);
             match self.pc.wrapping_sub(instruction_addr) {
                 0x2 => debug_message += "(C)",
