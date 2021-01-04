@@ -3,7 +3,7 @@
 ![build](https://github.com/Kurun-pan/riscv-emu/workflows/build/badge.svg)
 ![riscv-tests](https://github.com/Kurun-pan/riscv-emu/workflows/riscv-tests/badge.svg)
 
-`riscv-emu` is the RISC-V emulator that is written in Rust. Linux, xv6, NuttX, FreeRTOS and Zephyr OS are supported.
+`riscv-emu` is the RISC-V emulator that is written in Rust. This RISC-V emulator supports Linux, xv6, NuttX, FreeRTOS and Zephyr OS.
 
 ## Usage
 
