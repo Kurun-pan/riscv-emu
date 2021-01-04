@@ -43,11 +43,10 @@ impl Timer for Clint {
     fn tick(&mut self) {
         self.cycle = self.cycle.wrapping_add(1);
 
-        // TODO: Correctly care for the clock frequency (1MHz clock @ RTCCLK).
-        // The current settings have no reason.
-        if self.cycle % 0xfffff == 0 {
+        // todo: Correctly care for the clock frequency (1MHz clock @ RTCCLK).
+        //if self.cycle % 0xfffff == 0 {
             self.mtime = self.mtime.wrapping_add(1);
-        }
+        //}
     }
 
     fn is_pending_software_interrupt(&mut self, core: usize) -> bool {
