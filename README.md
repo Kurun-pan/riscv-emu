@@ -32,7 +32,7 @@ Linux is currently being debugged!
 
 ```
 $ ../target/release/riscv_emu_desktop \
-        -k ../artifacts/linux/fw_payload_qemu.elf \
+        -k ../artifacts/linux/fw_payload.elf \
         -m Qemu_virt \
         -d ../artifacts/linux/dtb/qemu_virtio.dtb \
         -f ../artifacts/linux/rootfs.img
