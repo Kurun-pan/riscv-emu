@@ -5,6 +5,7 @@
 ```
 $ git clone https://bitbucket.org/nuttx/tools.git
 $ cd tools/kconfig-frontends/
+$ autoreconf -f -i
 $ ./configure
 $ make
 $ sudo make install
@@ -23,7 +24,7 @@ $ git clone https://github.com/apache/incubator-nuttx-apps.git
 ## Configuration
 
 ```
-$ cd nuttx/
+$ cd incubator-nuttx/
 $ ./tools/configure.sh hifive1-revb:nsh
 ```
 
