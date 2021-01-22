@@ -16,8 +16,8 @@ $ sudo /sbin/ldconfig
 ```
 $ mkdir nuttx
 $ cd nuttx/
-$ git clone https://bitbucket.org/nuttx/nuttx.git
-$ git clone https://bitbucket.org/nuttx/apps.git
+$ git clone https://github.com/apache/incubator-nuttx.git
+$ git clone https://github.com/apache/incubator-nuttx-apps.git
 ```
 
 ## Configuration
