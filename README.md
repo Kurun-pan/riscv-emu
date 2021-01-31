@@ -28,8 +28,6 @@ $ cargo build --release
 
 #### Linux
 
-Linux is currently being debugged!
-
 ```
 $ ../target/release/riscv_emu_desktop \
         -k ../artifacts/linux/fw_payload.elf \
@@ -37,6 +35,8 @@ $ ../target/release/riscv_emu_desktop \
         -d ../artifacts/linux/dtb/qemu_virtio.dtb \
         -f ../artifacts/linux/rootfs.img
 ```
+
+![animation](./demo/linux.gif)
 
 #### NuttX
 
