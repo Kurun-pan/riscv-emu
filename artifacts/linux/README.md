@@ -7,7 +7,7 @@ $ git clone https://github.com/torvalds/linux -b v5.4
 $ cd linux
 $ make ARCH=riscv CROSS_COMPILE=riscv64-linux- defconfig
 $ make ARCH=riscv CROSS_COMPILE=riscv64-linux- menuconfig
-# Select "Choose Platform type" -> "Maximum Physical Memory" -> "2GiB"
+# Select "Platform type" -> "Maximum Physical Memory" -> "2GiB"
 $ make ARCH=riscv CROSS_COMPILE=riscv64-linux- -j 4
 $ cd ..
 ```
@@ -17,7 +17,7 @@ Note: Fail to boot Linux when we use the latest version?
 ### Build OpenSBI boot loader
 
 ```
-$ git clone https://github.com/riscv/opensbi.git -b v0.8
+$ git clone https://github.com/riscv/opensbi.git -b v0.9
 $ cd opensbi
 $ make CROSS_COMPILE=riscv64-linux- PLATFORM=generic FW_PAYLOAD_PATH=../linux/arch/riscv/boot/Image
 ```
