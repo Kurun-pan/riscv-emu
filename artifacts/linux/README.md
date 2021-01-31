@@ -12,7 +12,7 @@ $ make ARCH=riscv CROSS_COMPILE=riscv64-linux- -j 4
 $ cd ..
 ```
 
-Note: Fail to boot Linux when we use the latest version?
+Note: Does the latest version fail to boot?
 
 ### Build OpenSBI boot loader
 
