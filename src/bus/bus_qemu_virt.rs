@@ -116,7 +116,9 @@ impl Bus for BusQemuVirt {
 
     fn read8(&mut self, addr: u64) -> Result<u8, ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read8(addr - DRAM_ADDRESS_START));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.read8(addr & 0xffffffff - DRAM_ADDRESS_START));
         }
         match addr {
             DTB_ADDRESS_START..=DTB_ADDRESS_END => {
@@ -137,7 +139,9 @@ impl Bus for BusQemuVirt {
 
     fn read16(&mut self, addr: u64) -> Result<u16, ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read16(addr - DRAM_ADDRESS_START));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.read16(addr & 0xffffffff - DRAM_ADDRESS_START));
         }
         match addr {
             DTB_ADDRESS_START..=DTB_ADDRESS_END => {
@@ -162,7 +166,9 @@ impl Bus for BusQemuVirt {
 
     fn read32(&mut self, addr: u64) -> Result<u32, ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read32(addr - DRAM_ADDRESS_START));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.read32(addr & 0xffffffff - DRAM_ADDRESS_START));
         }
         match addr {
             DTB_ADDRESS_START..=DTB_ADDRESS_END => {
@@ -198,7 +204,9 @@ impl Bus for BusQemuVirt {
 
     fn read64(&mut self, addr: u64) -> Result<u64, ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.read64(addr - DRAM_ADDRESS_START));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.read64(addr & 0xffffffff - DRAM_ADDRESS_START));
         }
         match addr {
             DTB_ADDRESS_START..=DTB_ADDRESS_END => {
@@ -257,7 +265,9 @@ impl Bus for BusQemuVirt {
 
     fn write8(&mut self, addr: u64, data: u8) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write8(addr - DRAM_ADDRESS_START, data));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.write8(addr & 0xffffffff - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
@@ -272,7 +282,9 @@ impl Bus for BusQemuVirt {
 
     fn write16(&mut self, addr: u64, data: u16) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write16(addr - DRAM_ADDRESS_START, data));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.write16(addr & 0xffffffff - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => panic!("Unexpected size access."),
@@ -291,7 +303,9 @@ impl Bus for BusQemuVirt {
 
     fn write32(&mut self, addr: u64, data: u32) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write32(addr - DRAM_ADDRESS_START, data));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.write32(addr & 0xffffffff - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
@@ -320,7 +334,9 @@ impl Bus for BusQemuVirt {
 
     fn write64(&mut self, addr: u64, data: u64) -> Result<(), ()> {
         if DRAM_ADDRESS_START <= addr {
-            return Ok(self.dram.write64(addr - DRAM_ADDRESS_START, data));
+            // todo: Since there is a bug somewhere and access to the outside of the memory area occurs,
+            // mask processing is added. This is unnecessary, so I need to debug and delete it.
+            return Ok(self.dram.write64(addr & 0xffffffff - DRAM_ADDRESS_START, data));
         }
         match addr {
             TIMER_ADDRESS_START..=TIMER_ADDRESS_END => {
