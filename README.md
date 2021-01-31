@@ -36,7 +36,7 @@ $ ../target/release/riscv_emu_desktop \
         -f ../artifacts/linux/rootfs.img
 ```
 
-![animation](./demo/linux.gif)
+![animation](./demo/linux.mov)
 
 #### NuttX
 
